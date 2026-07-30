@@ -110,7 +110,7 @@ class BlaaizClientTest {
         Response response = jsonResponse(dummyRequest, 200, "{\"ok\":true}", Map.of("Custom", "1"));
         when(call.execute()).thenReturn(response);
 
-        BlaaizResponse<Object> result = client.makeRequest("GET", "/test", null, null);
+        BlaaizResponse result = client.makeRequest("GET", "/test", null, null);
 
         assertEquals(200, result.getStatus());
         assertTrue(result.getData() instanceof Map);

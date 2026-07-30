@@ -137,7 +137,7 @@ public class BlaaizClient {
      * headers -> headers} (later wins). A 2xx response is parsed and returned; anything else,
      * or a request that fails outright, is raised as a {@link BlaaizException}.
      */
-    public BlaaizResponse<Object> makeRequest(String method, String endpoint, Object data, Map<String, String> headers) {
+    public BlaaizResponse makeRequest(String method, String endpoint, Object data, Map<String, String> headers) {
         Objects.requireNonNull(method, "method must not be null");
         Objects.requireNonNull(endpoint, "endpoint must not be null");
         String upperMethod = method.toUpperCase(Locale.ROOT);
@@ -187,7 +187,7 @@ public class BlaaizClient {
                     } catch (IOException e) {
                         throw new BlaaizException("Failed to parse API response", status, "PARSE_ERROR");
                     }
-                    return new BlaaizResponse<>(parsed, status, responseHeaders);
+                    return new BlaaizResponse(parsed, status, responseHeaders);
                 }
 
                 Map<String, Object> errorData = tryParseJsonObject(bodyStr);
