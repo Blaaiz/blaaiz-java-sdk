@@ -1,5 +1,10 @@
 package com.blaaiz.sdk;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 /**
  * Dedicated exception type for network/API/OAuth/S3 transport failures raised by
  * {@link BlaaizClient} and the higher-level services built on top of it.
@@ -14,6 +19,8 @@ package com.blaaiz.sdk;
 public class BlaaizException extends RuntimeException {
 
     private static final long serialVersionUID = 1L;
+
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private final Integer status;
     private final String errorCode;
@@ -36,5 +43,41 @@ public class BlaaizException extends RuntimeException {
     /** API- or SDK-assigned error code associated with the failure, if any. */
     public String getErrorCode() {
         return errorCode;
+    }
+
+    /**
+     * {@code true} if {@link #getStatus()} falls in {@code [400, 500)}. Mirrors the Laravel
+     * SDK's {@code isClientError()}: a {@code null} status (no HTTP call ever completed, e.g.
+     * a transport/OAuth-plumbing failure) is neither a client nor a server error, so this
+     * returns {@code false} rather than throwing on the unboxing.
+     */
+    public boolean isClientError() {
+        return status != null && status >= 400 && status < 500;
+    }
+
+    /**
+     * {@code true} if {@link #getStatus()} is {@code >= 500}. See {@link #isClientError()} for
+     * the {@code null}-status handling.
+     */
+    public boolean isServerError() {
+        return status != null && status >= 500;
+    }
+
+    /** {@code {message, status, error_code}}, matching the Laravel SDK's {@code toArray()}. */
+    public Map<String, Object> toMap() {
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("message", getMessage());
+        map.put("status", status);
+        map.put("error_code", errorCode);
+        return map;
+    }
+
+    /** JSON-serialized {@link #toMap()}. */
+    public String toJson() {
+        try {
+            return OBJECT_MAPPER.writeValueAsString(toMap());
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to encode exception to JSON", e);
+        }
     }
 }
