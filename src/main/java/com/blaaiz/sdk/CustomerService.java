@@ -179,13 +179,19 @@ public class CustomerService extends BaseService {
                     "POST", "/api/external/customer/" + customerId + "/files", associationBody, null);
 
             return new UploadFileCompleteResult(associationResponse, fileId, presignedUrl);
-        } catch (IllegalArgumentException e) {
-            throw e;
         } catch (BlaaizException e) {
             if (e.getMessage() != null && e.getMessage().contains("File upload failed:")) {
                 throw e;
             }
             throw new BlaaizException("File upload failed: " + e.getMessage(), e.getStatus(), e.getErrorCode());
+        } catch (RuntimeException e) {
+            // Mirrors the Laravel/Node.js/Python source SDKs: every failure raised while the
+            // multi-step orchestration is in flight (bad base64, undetectable content type, a
+            // failed download, ...) is folded into a single "File upload failed" surface, not
+            // just transport-level BlaaizExceptions. Only the upfront synchronous validation
+            // above (customerId/file/file_category) is exempt, matching the source SDKs raising
+            // those before entering their own try blocks.
+            throw new BlaaizException("File upload failed: " + e.getMessage());
         }
     }
 
