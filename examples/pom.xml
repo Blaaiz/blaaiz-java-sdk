@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Standalone module for the example classes. It is deliberately NOT a child of the SDK's own
+  pom and is not part of the published build: it exists so the examples are compiled against
+  the real SDK API, which stops them from drifting out of date.
+
+  Build it with:
+    mvn -DskipTests install        (from the repository root, to install the SDK locally)
+    mvn -f examples/pom.xml compile
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.blaaiz</groupId>
+  <artifactId>blaaiz-java-sdk-examples</artifactId>
+  <version>1.0.0</version>
+  <packaging>jar</packaging>
+
+  <name>Blaaiz Java SDK Examples</name>
+  <description>Runnable examples for the Blaaiz Java SDK</description>
+
+  <properties>
+    <maven.compiler.source>11</maven.compiler.source>
+    <maven.compiler.target>11</maven.compiler.target>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <maven.deploy.skip>true</maven.deploy.skip>
+    <maven.install.skip>true</maven.install.skip>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.blaaiz</groupId>
+      <artifactId>blaaiz-java-sdk</artifactId>
+      <version>1.0.0</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.13.0</version>
+        <configuration>
+          <release>11</release>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>
