@@ -7,6 +7,14 @@ on:
     branches: [ main, develop ]
   release:
     types: [ published ]
+  schedule:
+    # Weekly, so the dependency audit still runs when nobody pushes.
+    - cron: '0 6 * * 1'
+
+# A new push to the same branch cancels the run that it supersedes.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   test:
@@ -86,9 +94,15 @@ jobs:
       - name: Compile the examples
         run: mvn -B -f examples/pom.xml compile
 
+  # Deliberately NOT run on pull requests. OWASP dependency-check downloads the whole NVD
+  # CVE database, which takes tens of minutes on a cold cache and is rate-limited hard
+  # without an NVD_API_KEY. Running it per-PR left the check list pending long after every
+  # other job had finished. It runs on pushes to main/develop and weekly instead, so a new
+  # CVE is still caught within seven days. Dependabot covers the gap between runs.
   security-audit:
     runs-on: ubuntu-22.04
     needs: test
+    if: github.event_name == 'push' || github.event_name == 'schedule'
 
     steps:
       - uses: actions/checkout@v4
@@ -100,7 +114,16 @@ jobs:
           java-version: '17'
           cache: maven
 
+      # Without this cache every run re-downloads the full NVD feed.
+      - name: Cache the NVD data
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository/org/owasp/dependency-check-data
+          key: dependency-check-data-${{ github.run_id }}
+          restore-keys: dependency-check-data-
+
       # Fails the job on any dependency with a CVSS score of 7.0 or higher.
+      # Set the NVD_API_KEY repository secret to raise the NVD rate limit.
       - name: OWASP dependency check
         run: >
           mvn -B org.owasp:dependency-check-maven:10.0.3:check
@@ -108,7 +131,6 @@ jobs:
           -DassemblyAnalyzerEnabled=false
         env:
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
-        continue-on-error: true
 
   publish-dry-run:
     runs-on: ubuntu-22.04
@@ -131,9 +153,11 @@ jobs:
       - name: Verify release artifacts
         run: mvn -B -Prelease -DskipTests -Dgpg.skip=true package
 
+  # security-audit is intentionally absent from `needs`: it does not run on a release event,
+  # and a skipped dependency would skip this job too.
   publish:
     runs-on: ubuntu-22.04
-    needs: [ test, build, security-audit ]
+    needs: [ test, build, examples ]
     if: github.event_name == 'release' && github.event.action == 'published'
 
     steps:
