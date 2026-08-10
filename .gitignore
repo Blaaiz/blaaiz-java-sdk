@@ -27,3 +27,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Examples module build output
+examples/target/

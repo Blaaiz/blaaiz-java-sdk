@@ -10,6 +10,7 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
@@ -124,7 +125,7 @@ public class BlaaizClient {
                 .build();
     }
 
-    /** The 20 canonical OAuth scopes, in fixed order. */
+    /** The 21 canonical OAuth scopes, in fixed order. */
     public static List<String> allScopes() {
         return ALL_SCOPES;
     }
@@ -201,6 +202,11 @@ public class BlaaizClient {
             }
         } catch (BlaaizException e) {
             throw e;
+        } catch (InterruptedIOException e) {
+            // SocketTimeoutException (connect/read/write timeout) extends InterruptedIOException,
+            // so this branch must precede the general IOException one below. Mirrors the Node.js
+            // SDK, which raises TIMEOUT_ERROR rather than REQUEST_ERROR when a request times out.
+            throw new BlaaizException("Request timeout", null, "TIMEOUT_ERROR");
         } catch (IOException e) {
             throw new BlaaizException("Request failed: " + e.getMessage(), null, "REQUEST_ERROR");
         } catch (RuntimeException e) {

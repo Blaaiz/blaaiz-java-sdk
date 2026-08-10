@@ -15,6 +15,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.IOException;
+import java.net.SocketTimeoutException;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -223,6 +224,18 @@ class BlaaizClientTest {
         BlaaizException e = assertThrows(BlaaizException.class, () -> client.makeRequest("GET", "/test", null, null));
         assertEquals("REQUEST_ERROR", e.getErrorCode());
         assertTrue(e.getMessage().contains("Connection timeout"));
+    }
+
+    @Test
+    void makeRequestWrapsSocketTimeoutAsTimeoutError() throws IOException {
+        BlaaizClient client = new BlaaizClient(new BlaaizClientOptions().apiKey("test-key"), okHttpClient);
+
+        when(call.execute()).thenThrow(new SocketTimeoutException("timeout"));
+
+        BlaaizException e = assertThrows(BlaaizException.class, () -> client.makeRequest("GET", "/test", null, null));
+        assertEquals("Request timeout", e.getMessage());
+        assertEquals("TIMEOUT_ERROR", e.getErrorCode());
+        assertNull(e.getStatus());
     }
 
     @Test
