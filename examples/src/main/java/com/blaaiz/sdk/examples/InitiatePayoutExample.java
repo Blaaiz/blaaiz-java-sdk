@@ -33,6 +33,8 @@ public final class InitiatePayoutExample {
                     "from_amount", 1000));
             System.out.println("Fee breakdown: " + fees.getData());
 
+            // merchant_reference is optional. It is your own identifier, unique per business,
+            // and it returns on the payout transaction.
             BlaaizResponse payout = blaaiz.payouts().initiate(Map.of(
                     "wallet_id", walletId,
                     "customer_id", customerId,
@@ -41,7 +43,8 @@ public final class InitiatePayoutExample {
                     "from_currency_id", "NGN",
                     "to_currency_id", "NGN",
                     "bank_id", bankId,
-                    "account_number", "0123456789"));
+                    "account_number", "0123456789",
+                    "merchant_reference", "invoice-" + System.currentTimeMillis()));
             System.out.println("Payout: " + payout.getData());
         } catch (BlaaizException e) {
             System.err.println("Payout failed: " + e.getMessage());
