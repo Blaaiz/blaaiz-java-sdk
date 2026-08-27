@@ -34,11 +34,22 @@ class CollectionServiceTest {
 
     private static Map<String, Object> validCollection() {
         Map<String, Object> data = new LinkedHashMap<>();
-        data.put("customer_id", "cust_1");
-        data.put("wallet_id", "wallet_1");
+        data.put("method", "open_banking");
         data.put("amount", 100);
-        data.put("currency", "NGN");
-        data.put("method", "bank_transfer");
+        data.put("wallet_id", "wallet_1");
+        return data;
+    }
+
+    private static Map<String, Object> validCardCollection() {
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("method", "card");
+        data.put("amount", 100);
+        data.put("wallet_id", "wallet_1");
+        data.put("customer_id", "cust_1");
+        data.put("card_holder_name", "Jane Doe");
+        data.put("card_number", "4111111111111111");
+        data.put("expiry", "12/30");
+        data.put("cvc", "123");
         return data;
     }
 
@@ -70,7 +81,7 @@ class CollectionServiceTest {
 
     @Test
     void initiateThrowsWhenRequiredFieldMissing() {
-        for (String field : new String[] {"customer_id", "wallet_id", "amount", "currency", "method"}) {
+        for (String field : new String[] {"method", "amount", "wallet_id"}) {
             Map<String, Object> data = validCollection();
             data.remove(field);
 
@@ -78,6 +89,51 @@ class CollectionServiceTest {
             assertEquals(field + " is required", e.getMessage());
         }
         verifyNoInteractions(client);
+    }
+
+    @Test
+    void initiateDoesNotRequireCustomerIdForOpenBanking() {
+        // Only card collections need customer_id up front; open_banking does not.
+        when(client.makeRequest(eq("POST"), eq("/api/external/collection"), anyMap(), isNull()))
+                .thenReturn(new BlaaizResponse(Map.of(), 200, null));
+
+        collections.initiate(validCollection());
+
+        verify(client).makeRequest("POST", "/api/external/collection", validCollection(), null);
+    }
+
+    @Test
+    void initiateCardSendsPostWhenAllCardFieldsPresent() {
+        when(client.makeRequest(eq("POST"), eq("/api/external/collection"), anyMap(), isNull()))
+                .thenReturn(new BlaaizResponse(Map.of(), 200, null));
+
+        collections.initiate(validCardCollection());
+
+        verify(client).makeRequest("POST", "/api/external/collection", validCardCollection(), null);
+    }
+
+    @Test
+    void initiateCardThrowsWhenCardFieldMissing() {
+        for (String field : new String[] {"customer_id", "card_holder_name", "card_number", "expiry", "cvc"}) {
+            Map<String, Object> data = validCardCollection();
+            data.remove(field);
+
+            IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> collections.initiate(data));
+            assertEquals(field + " is required", e.getMessage());
+        }
+        verifyNoInteractions(client);
+    }
+
+    @Test
+    void initiateForwardsOptionalMerchantReferenceVerbatim() {
+        Map<String, Object> data = validCollection();
+        data.put("merchant_reference", "order-123");
+        when(client.makeRequest(eq("POST"), eq("/api/external/collection"), anyMap(), isNull()))
+                .thenReturn(new BlaaizResponse(Map.of(), 200, null));
+
+        collections.initiate(data);
+
+        verify(client).makeRequest("POST", "/api/external/collection", data, null);
     }
 
     @Test
@@ -158,6 +214,65 @@ class CollectionServiceTest {
 
         assertEquals(response, result);
         verify(client).makeRequest("GET", "/api/external/collection/crypto/networks", null, null);
+    }
+
+    @Test
+    void getCryptoNetworksSendsFiltersAsQueryParams() {
+        Map<String, Object> filters = new LinkedHashMap<>();
+        filters.put("transaction_type", "payout");
+        when(client.makeRequest(eq("GET"), eq("/api/external/collection/crypto/networks"), eq(filters), isNull()))
+                .thenReturn(new BlaaizResponse(Map.of(), 200, null));
+
+        collections.getCryptoNetworks(filters);
+
+        verify(client).makeRequest("GET", "/api/external/collection/crypto/networks", filters, null);
+    }
+
+    @Test
+    void getCryptoNetworksSendsNoParamsWhenFiltersEmpty() {
+        when(client.makeRequest(eq("GET"), eq("/api/external/collection/crypto/networks"), isNull(), isNull()))
+                .thenReturn(new BlaaizResponse(Map.of(), 200, null));
+
+        collections.getCryptoNetworks(new LinkedHashMap<>());
+
+        verify(client).makeRequest("GET", "/api/external/collection/crypto/networks", null, null);
+    }
+
+    // ---- initiateInteracMoneyRequest ----
+
+    @Test
+    void initiateInteracMoneyRequestSendsPostToEndpoint() {
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("amount", 100);
+        data.put("email", "payer@example.com");
+        when(client.makeRequest(eq("POST"), eq("/api/external/collection/interac-money-request"), anyMap(), isNull()))
+                .thenReturn(new BlaaizResponse(Map.of(), 200, null));
+
+        collections.initiateInteracMoneyRequest(data);
+
+        verify(client).makeRequest("POST", "/api/external/collection/interac-money-request", data, null);
+    }
+
+    @Test
+    void initiateInteracMoneyRequestThrowsWhenAmountMissing() {
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("email", "payer@example.com");
+
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+                () -> collections.initiateInteracMoneyRequest(data));
+        assertEquals("amount is required", e.getMessage());
+        verifyNoInteractions(client);
+    }
+
+    @Test
+    void initiateInteracMoneyRequestThrowsWhenEmailMissing() {
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("amount", 100);
+
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+                () -> collections.initiateInteracMoneyRequest(data));
+        assertEquals("email is required", e.getMessage());
+        verifyNoInteractions(client);
     }
 
     // ---- acceptInteracMoneyRequest ----
