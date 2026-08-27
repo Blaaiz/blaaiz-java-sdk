@@ -90,9 +90,11 @@ When you configure both OAuth credentials and an API key, the SDK uses OAuth.
 - **Webhooks**: Webhook configuration and signature verification
 - **Files**: Document upload with pre-signed URLs
 - **Fees**: Fee calculations and breakdowns
-- **Banks and currencies**: The supported banks and currencies
+- **Banks and currencies**: The supported banks and currencies, payee and IBAN verification
 - **Rates**: FX rate lookups
 - **Swaps**: Currency swaps between business wallets
+- **Refunds**: Refund creation and lookup
+- **Merchant reference**: An optional `merchant_reference` on a payout or a collection. See [Merchant reference](#merchant-reference).
 
 ## Supported Currencies and Methods
 
@@ -154,6 +156,7 @@ The sections below show the most common calls. For the full reference, read the 
 - [Transactions, banks, currencies, and rates](docs/transactions-banks-currencies-rates.md)
 - [Fees and files](docs/fees-files.md)
 - [Swaps](docs/swaps.md)
+- [Refunds](docs/refunds.md)
 - [Webhooks](docs/webhooks.md)
 
 ### Services
@@ -175,6 +178,7 @@ Get each service from the `Blaaiz` facade:
 | `webhooks()`               | `WebhookService`             |
 | `rates()`                  | `RateService`                |
 | `swaps()`                  | `SwapService`                |
+| `refunds()`                | `RefundService`              |
 
 ### Customer Management
 
@@ -189,7 +193,6 @@ BlaaizResponse customer = blaaiz.customers().create(Map.of(
         "country", "NG",
         "id_type", "passport",         // drivers_license, passport, id_card, resident_permit
         "id_number", "A12345678"
-        // "business_name", "Company Name" // Required when type is business
 ));
 
 @SuppressWarnings("unchecked")
@@ -199,8 +202,57 @@ Map<String, Object> data = (Map<String, Object>) body.get("data");
 System.out.println("Customer ID: " + data.get("id"));
 ```
 
-**Note:** For the `individual` type, `first_name` and `last_name` are required. For the
-`business` type, `business_name` is required instead.
+To create a business customer, send the business identity fields:
+
+```java
+BlaaizResponse business = blaaiz.customers().create(Map.of(
+        "type", "business",
+        "email", "ops@acme.example.com",
+        "country", "NG",
+        "business_name", "Acme Ltd",
+        "registration_number", "RC123456",
+        "incorporation_country", "NG"
+));
+```
+
+**Note:** An individual customer requires `first_name`, `last_name`, `id_type`, and `id_number`.
+A business customer requires `business_name`, `registration_number`, and `incorporation_country`.
+The `id_type` and `id_number` fields are for individual customers only.
+
+#### Submit a customer for verification
+
+```java
+blaaiz.customers().submit("customer-id");
+```
+
+#### Upgrade a business customer to full KYB
+
+```java
+blaaiz.customers().upgradeKybScope("customer-id", Map.of(
+        "owners", List.of(Map.of(
+                "first_name", "Jane",
+                "last_name", "Doe",
+                "ownership_percentage", 100
+        ))
+));
+```
+
+The `owners` list is required. The ownership percentages must sum to exactly 100.
+
+#### Manage business documents
+
+```java
+blaaiz.customers().listDocuments("customer-id");
+blaaiz.customers().getDocument("customer-id", "document-id");
+blaaiz.customers().getDocumentPresignedUrl("customer-id");
+blaaiz.customers().createDocument("customer-id", Map.of(
+        "type", "PROOF_OF_ADDRESS",
+        "name", "Utility bill",
+        "file_id", "file-uuid"
+));
+blaaiz.customers().updateDocument("customer-id", "document-id", Map.of("name", "Renamed"));
+blaaiz.customers().deleteDocument("customer-id", "document-id");
+```
 
 #### Get a customer
 
@@ -337,13 +389,31 @@ BlaaizResponse collection = blaaiz.collections().initiate(Map.of(
 
 #### Card collection (NGN/USD)
 
+A card collection requires `customer_id` and the card details.
+
 ```java
 BlaaizResponse collection = blaaiz.collections().initiate(Map.of(
-        "customer_id", "customer-id",
-        "wallet_id", "wallet-id",
+        "method", "card",
         "amount", 5000,
-        "currency", "NGN",
-        "method", "card"
+        "wallet_id", "wallet-id",
+        "customer_id", "customer-id",
+        "card_holder_name", "John Doe",
+        "card_number", "4111111111111111",
+        "expiry", "12/30",             // MM/YY
+        "cvc", "123",
+        "merchant_reference", "order-2001"   // Optional. See Merchant reference.
+));
+```
+
+#### Interac money request (CAD)
+
+```java
+BlaaizResponse request = blaaiz.collections().initiateInteracMoneyRequest(Map.of(
+        "amount", 100,
+        "email", "payer@example.com",
+        "customer_name", "John Doe",   // Optional
+        "expiry_hours", 24,            // Optional. 1 to 120.
+        "note", "Invoice 2001"         // Optional
 ));
 ```
 
@@ -399,7 +469,8 @@ BlaaizResponse payout = blaaiz.payouts().initiate(Map.of(
         "to_currency_id", "NGN",
         "bank_id", "bank-id",          // Required for NGN
         "account_number", "0123456789",
-        "phone_number", "+2348012345678"
+        "phone_number", "+2348012345678",
+        "merchant_reference", "invoice-2001"   // Optional. See Merchant reference.
 ));
 ```
 
@@ -580,14 +651,40 @@ BlaaizResponse transactions = blaaiz.transactions().list(Map.of(
 BlaaizResponse transaction = blaaiz.transactions().get("transaction-id");
 ```
 
+To find a transaction by its merchant reference, filter the list or pass the value to `get()`.
+`get()` accepts a transaction id, a reference, or a merchant reference.
+
+```java
+BlaaizResponse byMerchantReference = blaaiz.transactions().list(Map.of(
+        "merchant_reference", "invoice-2001"
+));
+
+BlaaizResponse transaction = blaaiz.transactions().get("invoice-2001");
+```
+
 ### Banks and Currencies
 
 ```java
 BlaaizResponse banks = blaaiz.banks().list();
 
+// Filter the bank list by currency, country, or country_id
+BlaaizResponse ngnBanks = blaaiz.banks().list(Map.of("currency", "NGN"));
+
 BlaaizResponse accountInfo = blaaiz.banks().lookupAccount(Map.of(
         "account_number", "0123456789",
         "bank_id", "1"
+));
+
+// Confirmation of Payee: verify a UK account
+BlaaizResponse payee = blaaiz.banks().verifyPayee(Map.of(
+        "sort_code", "123456",
+        "account_number", "12345678",
+        "account_name", "John Doe"
+));
+
+// SEPA reachability: verify an IBAN
+BlaaizResponse iban = blaaiz.banks().verifyIban(Map.of(
+        "iban", "DE89370400440532013000"
 ));
 
 BlaaizResponse currencies = blaaiz.currencies().list();
@@ -602,14 +699,28 @@ BlaaizResponse ngnRates = blaaiz.rates().list("NGN");
 
 ### Swaps
 
-`swaps().swap()` moves money between two business wallets in different currencies.
+`swaps().initiate()` moves money between two business wallets in different currencies.
 
 ```java
-BlaaizResponse swap = blaaiz.swaps().swap(Map.of(
+BlaaizResponse swap = blaaiz.swaps().initiate(Map.of(
         "from_business_wallet_id", "wallet-id-usd",
         "to_business_wallet_id", "wallet-id-ngn",
         "amount", 500
 ));
+```
+
+### Refunds
+
+`refunds().initiate()` creates a refund for a transaction. `refunds().get()` returns a refund.
+
+```java
+BlaaizResponse refund = blaaiz.refunds().initiate(Map.of(
+        "transaction_id", "transaction-id",
+        "reason", "Customer request",  // Optional
+        "reference", "refund-2001"     // Optional
+));
+
+BlaaizResponse status = blaaiz.refunds().get("refund-id");
 ```
 
 ### Fees
@@ -650,6 +761,38 @@ BlaaizResponse replay = blaaiz.webhooks().replay(Map.of(
 // Send a mock Interac webhook. This works outside production only.
 BlaaizResponse simulate = blaaiz.webhooks().simulateInteracWebhook(Map.of(
         "interac_email", "sender@example.com"
+));
+```
+
+## Merchant reference
+
+`merchant_reference` is an optional string on a payout (`payouts().initiate()`) and a collection
+(`collections().initiate()`). Use it to store your own identifier, such as an invoice number or
+an order number.
+
+The rules are:
+
+- The maximum length is 255 characters.
+- The value is unique for each business. A duplicate value for the same business returns HTTP 422.
+- Two different businesses can use the same value.
+
+The `merchant_reference` value returns on the transaction, on a transaction in the list, and on a
+single transaction. The collection, payout, and payout-initiated webhooks also carry the value.
+
+To find a transaction by its merchant reference, filter `transactions().list()` with the
+`merchant_reference` key, or pass the value to `transactions().get()`.
+
+```java
+blaaiz.payouts().initiate(Map.of(
+        "wallet_id", "wallet-id",
+        "customer_id", "customer-id",
+        "method", "bank_transfer",
+        "from_amount", 1000,
+        "from_currency_id", "NGN",
+        "to_currency_id", "NGN",
+        "bank_id", "bank-id",
+        "account_number", "0123456789",
+        "merchant_reference", "invoice-2001"
 ));
 ```
 

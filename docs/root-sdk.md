@@ -62,6 +62,7 @@ SDKs.
 | `webhooks()`               | `WebhookService`             |
 | `rates()`                  | `RateService`                |
 | `swaps()`                  | `SwapService`                |
+| `refunds()`                | `RefundService`              |
 
 ## `testConnection()`
 

@@ -22,17 +22,32 @@ Required for every type:
 - `type` — `individual` or `business`
 - `email`
 - `country` — the ISO country code, for example `NG`
-- `id_type` — `drivers_license`, `passport`, `id_card`, or `resident_permit`
-- `id_number`
 
 Required for `type` `individual`:
 
 - `first_name`
 - `last_name`
+- `id_type` — `drivers_license`, `passport`, `id_card`, or `resident_permit`
+- `id_number`
 
 Required for `type` `business`:
 
 - `business_name`
+- `registration_number`
+- `incorporation_country` — the ISO country code
+
+The `id_type` and `id_number` fields are for an individual customer only. The API rejects them
+for a business customer.
+
+```java
+BlaaizResponse business = blaaiz.customers().create(Map.of(
+        "type", "business",
+        "email", "ops@acme.example.com",
+        "country", "NG",
+        "business_name", "Acme Ltd",
+        "registration_number", "RC123456",
+        "incorporation_country", "NG"));
+```
 
 The API wraps the new customer in a second `data` key. Read the identifier at `data.data.id`:
 
@@ -109,7 +124,7 @@ The SDK sends `kycData` without a change.
 
 ## `uploadFiles(String customerId, Map<String, Object> fileData)`
 
-`PUT /api/external/customer/{customerId}/files`
+`POST /api/external/customer/{customerId}/files`
 
 Attaches a file that you already uploaded to a pre-signed URL. Use the `file_id` that
 `files().getPresignedUrl()` returned.
@@ -136,6 +151,109 @@ BlaaizResponse beneficiaries = blaaiz.customers().listBeneficiaries("customer-id
 ```java
 BlaaizResponse beneficiary = blaaiz.customers().getBeneficiary("customer-id", "beneficiary-id");
 ```
+
+## `submit(String customerId)`
+
+`POST /api/external/customer/{customerId}/submit`
+
+Submits the customer for KYC or KYB verification. This call sends no body.
+
+```java
+blaaiz.customers().submit("customer-id");
+```
+
+## `upgradeKybScope(String customerId, Map<String, Object> upgradeData)`
+
+`POST /api/external/customer/{customerId}/upgrade-kyb-scope`
+
+Upgrades a business customer from MINIMAL to FULL KYB scope.
+
+```java
+blaaiz.customers().upgradeKybScope("customer-id", Map.of(
+        "owners", List.of(Map.of(
+                "first_name", "Jane",
+                "last_name", "Doe",
+                "ownership_percentage", 100))));
+```
+
+Required:
+
+- `owners` — a list with at least one owner. The ownership percentages must sum to exactly 100.
+
+The SDK throws `IllegalArgumentException` when `owners` is missing or empty.
+
+## `deleteOwner(String customerId, String ownerId)`
+
+`DELETE /api/external/customer/{customerId}/owner/{ownerId}`
+
+```java
+blaaiz.customers().deleteOwner("customer-id", "owner-id");
+```
+
+## `getOwnerFilePresignedUrl(String customerId, String ownerId, Map<String, Object> presignedData)`
+
+`POST /api/external/customer/{customerId}/owner/{ownerId}/file/presigned-url`
+
+```java
+BlaaizResponse presigned = blaaiz.customers().getOwnerFilePresignedUrl("customer-id", "owner-id", Map.of(
+        "file_category", "id_document_front"));
+```
+
+Required:
+
+- `file_category` — `id_document_front` or `id_document_back`
+
+## `uploadOwnerFiles(String customerId, String ownerId, Map<String, Object> fileData)`
+
+`POST /api/external/customer/{customerId}/owner/{ownerId}/files`
+
+```java
+blaaiz.customers().uploadOwnerFiles("customer-id", "owner-id", Map.of(
+        "id_document_front", "file-uuid-front",
+        "id_document_back", "file-uuid-back"));
+```
+
+Required:
+
+- `id_document_front` — the file identifier for the front of the document
+
+Optional:
+
+- `id_document_back` — the file identifier for the back of the document
+
+## Documents
+
+Use these methods to manage the business documents of a customer.
+
+```java
+// List the documents
+BlaaizResponse documents = blaaiz.customers().listDocuments("customer-id");
+
+// Get one document
+BlaaizResponse document = blaaiz.customers().getDocument("customer-id", "document-id");
+
+// Get a pre-signed URL for a document upload. This call sends no body.
+BlaaizResponse presigned = blaaiz.customers().getDocumentPresignedUrl("customer-id");
+
+// Create a document
+BlaaizResponse created = blaaiz.customers().createDocument("customer-id", Map.of(
+        "type", "PROOF_OF_ADDRESS",
+        "name", "Utility bill",
+        "file_id", "file-uuid"));
+
+// Update a document
+BlaaizResponse updated = blaaiz.customers().updateDocument("customer-id", "document-id", Map.of(
+        "name", "Renamed document"));
+
+// Delete a document
+blaaiz.customers().deleteDocument("customer-id", "document-id");
+```
+
+`createDocument` requires `type`, `name`, and `file_id`. The `type` value is one of these:
+`CERTIFICATE_OF_INCORPORATION`, `ARTICLES_OF_INCORPORATION`, `BENEFICIAL_OWNERSHIP_CERTIFICATE`,
+`INCORPORATION_DOCUMENTS`, `CAC_STATUS_REPORT`, `ACCOUNT_AGREEMENT`, `PROOF_OF_ADDRESS`,
+`BANK_STATEMENT`, `LICENSE`, `SHARE_REGISTRATION`, `COMPANY_OWNERSHIP_STRUCTURE`,
+`DIRECTORS_REGISTER`, or `OTHER`.
 
 ## `uploadFileComplete(String customerId, Map<String, Object> fileOptions)`
 

@@ -23,10 +23,14 @@ recipient gets.
 
 ### Optional fields
 
-| Field          | Description                                                            |
-| -------------- | ---------------------------------------------------------------------- |
-| `note`         | The transaction description. It defaults to your business name.         |
-| `phone_number` | The phone number of the recipient                                       |
+| Field                | Description                                                            |
+| -------------------- | ---------------------------------------------------------------------- |
+| `note`               | The transaction description. It defaults to your business name.         |
+| `phone_number`       | The phone number of the recipient                                       |
+| `merchant_reference` | Your own reference. Maximum 255 characters. Unique for each business.    |
+
+For `merchant_reference`, see [Merchant reference](../README.md#merchant-reference). The value
+returns on the payout transaction, which is `null` when the payout has none.
 
 `initiate()` forwards the whole payload without a change. You can send any field that the
 [Blaaiz API reference](https://docs.business.blaaiz.com) documents, even a field that this page
