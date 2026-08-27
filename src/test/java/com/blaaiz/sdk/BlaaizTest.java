@@ -85,6 +85,7 @@ class BlaaizTest {
         assertNotNull(blaaiz.webhooks());
         assertNotNull(blaaiz.rates());
         assertNotNull(blaaiz.swaps());
+        assertNotNull(blaaiz.refunds());
     }
 
     @Test
