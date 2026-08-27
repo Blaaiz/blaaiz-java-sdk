@@ -29,6 +29,7 @@ public class Blaaiz {
     private final WebhookService webhooks;
     private final RateService rates;
     private final SwapService swaps;
+    private final RefundService refunds;
 
     public Blaaiz(BlaaizClientOptions options) {
         this(options, null);
@@ -51,6 +52,7 @@ public class Blaaiz {
         this.webhooks = new WebhookService(client);
         this.rates = new RateService(client);
         this.swaps = new SwapService(client);
+        this.refunds = new RefundService(client);
     }
 
     public CustomerService customers() {
@@ -97,18 +99,19 @@ public class Blaaiz {
         return webhooks;
     }
 
-    /**
-     * FX rate lookups. See {@link RateService}'s Javadoc for the Laravel-only parity caveat.
-     */
+    /** FX rate lookups. */
     public RateService rates() {
         return rates;
     }
 
-    /**
-     * Business-wallet swaps. See {@link SwapService}'s Javadoc for the Laravel-only parity caveat.
-     */
+    /** Business-wallet swaps. */
     public SwapService swaps() {
         return swaps;
+    }
+
+    /** Refund creation and lookup. */
+    public RefundService refunds() {
+        return refunds;
     }
 
     /** {@code true} if {@link CurrencyService#list()} succeeds; swallows any exception, never throws. */
