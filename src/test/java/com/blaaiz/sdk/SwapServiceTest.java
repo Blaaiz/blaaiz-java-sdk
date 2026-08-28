@@ -153,4 +153,18 @@ class SwapServiceTest {
         assertEquals(400, e.getStatus());
         assertEquals("INSUFFICIENT_BALANCE", e.getErrorCode());
     }
+
+    @Test
+    void swapIsADeprecatedAliasOfInitiate() {
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("from_business_wallet_id", "a");
+        data.put("to_business_wallet_id", "b");
+        data.put("amount", 10);
+        when(client.makeRequest(eq("POST"), eq("/api/external/swap"), eq(data), isNull()))
+                .thenReturn(new BlaaizResponse(Map.of("status", "SUCCESSFUL"), 200, null));
+
+        swaps.swap(data);
+
+        verify(client).makeRequest("POST", "/api/external/swap", data, null);
+    }
 }

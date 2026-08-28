@@ -18,4 +18,13 @@ public class SwapService extends BaseService {
         requireFields(swapData, "from_business_wallet_id", "to_business_wallet_id", "amount");
         return client.makeRequest("POST", "/api/external/swap", swapData, null);
     }
+
+    /**
+     * @deprecated use {@link #initiate(Map)} instead. Kept for backward compatibility;
+     *             it will be removed in a future major version.
+     */
+    @Deprecated
+    public BlaaizResponse swap(Map<String, Object> swapData) {
+        return initiate(swapData);
+    }
 }
