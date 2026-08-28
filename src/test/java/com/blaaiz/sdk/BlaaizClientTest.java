@@ -133,7 +133,7 @@ class BlaaizClientTest {
         Request sent = requestCaptor.getValue();
         assertEquals("test-key", sent.header("x-blaaiz-api-key"));
         assertEquals("application/json", sent.header("Accept"));
-        assertEquals("Blaaiz-Java-SDK/1.0.0", sent.header("User-Agent"));
+        assertEquals("Blaaiz-Java-SDK/1.4.0", sent.header("User-Agent"));
         assertNull(sent.header("Authorization"));
     }
 
@@ -471,7 +471,7 @@ class BlaaizClientTest {
         client.downloadFile("https://example.com/file");
 
         Request sent = requestCaptor.getValue();
-        assertEquals("Blaaiz-Java-SDK/1.0.0", sent.header("User-Agent"));
+        assertEquals("Blaaiz-Java-SDK/1.4.0", sent.header("User-Agent"));
         assertNull(sent.header("x-blaaiz-api-key"));
         assertNull(sent.header("Authorization"));
         assertNull(sent.header("Accept"));
