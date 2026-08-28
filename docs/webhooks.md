@@ -29,20 +29,19 @@ Returns the URLs that you registered.
 BlaaizResponse config = blaaiz.webhooks().get();
 ```
 
-### `update(Map<String, Object> webhookData)`
+### `update(String webhookId, Map<String, Object> webhookData)`
 
-`PUT /api/external/webhook`
+`PUT /api/external/webhook/{webhookId}`
 
 ```java
-BlaaizResponse updated = blaaiz.webhooks().update(Map.of(
-        "collection_url", "https://your-domain.com/webhooks/v2/collection"));
+BlaaizResponse updated = blaaiz.webhooks().update("webhook-id", Map.of(
+        "collection_url", "https://your-domain.com/webhooks/v2/collection",
+        "payout_url", "https://your-domain.com/webhooks/v2/payout"));
 ```
-
-The SDK does no local validation here. It forwards `webhookData` without a change.
 
 ### `replay(Map<String, Object> replayData)`
 
-`POST /api/external/webhook/replay`
+`POST /api/external/webhook-replay`
 
 Asks Blaaiz to send the webhook for one transaction again. Use it when your endpoint was down.
 

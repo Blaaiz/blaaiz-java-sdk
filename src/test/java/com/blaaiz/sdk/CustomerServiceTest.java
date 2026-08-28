@@ -9,6 +9,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Base64;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -47,6 +48,17 @@ class CustomerServiceTest {
         data.put("id_number", "A1234567");
         data.put("first_name", "Jane");
         data.put("last_name", "Doe");
+        return data;
+    }
+
+    private static Map<String, Object> businessCustomer() {
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("type", "business");
+        data.put("email", "biz@example.com");
+        data.put("country", "NG");
+        data.put("business_name", "Acme Ltd");
+        data.put("registration_number", "RC123456");
+        data.put("incorporation_country", "NG");
         return data;
     }
 
@@ -92,30 +104,67 @@ class CustomerServiceTest {
     }
 
     @Test
+    void createThrowsWhenIndividualMissingIdType() {
+        Map<String, Object> data = individualCustomer();
+        data.remove("id_type");
+
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> customers.create(data));
+        assertEquals("id_type is required when type is individual", e.getMessage());
+    }
+
+    @Test
+    void createThrowsWhenIndividualMissingIdNumber() {
+        Map<String, Object> data = individualCustomer();
+        data.remove("id_number");
+
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> customers.create(data));
+        assertEquals("id_number is required when type is individual", e.getMessage());
+    }
+
+    @Test
+    void createSendsPostForBusinessType() {
+        when(client.makeRequest(eq("POST"), eq("/api/external/customer"), anyMap(), isNull()))
+                .thenReturn(new BlaaizResponse(Map.of(), 200, null));
+
+        customers.create(businessCustomer());
+
+        verify(client).makeRequest("POST", "/api/external/customer", businessCustomer(), null);
+    }
+
+    @Test
     void createThrowsWhenBusinessMissingBusinessName() {
-        Map<String, Object> data = new LinkedHashMap<>();
-        data.put("type", "business");
-        data.put("email", "biz@example.com");
-        data.put("country", "NG");
-        data.put("id_type", "RC_NUMBER");
-        data.put("id_number", "RC123");
+        Map<String, Object> data = businessCustomer();
+        data.remove("business_name");
 
         IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> customers.create(data));
         assertEquals("business_name is required when type is business", e.getMessage());
     }
 
     @Test
-    void createDoesNotRequireNamesForBusinessType() {
-        Map<String, Object> data = new LinkedHashMap<>();
-        data.put("type", "business");
-        data.put("email", "biz@example.com");
-        data.put("country", "NG");
-        data.put("id_type", "RC_NUMBER");
-        data.put("id_number", "RC123");
-        data.put("business_name", "Acme Ltd");
+    void createThrowsWhenBusinessMissingRegistrationNumber() {
+        Map<String, Object> data = businessCustomer();
+        data.remove("registration_number");
+
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> customers.create(data));
+        assertEquals("registration_number is required when type is business", e.getMessage());
+    }
+
+    @Test
+    void createThrowsWhenBusinessMissingIncorporationCountry() {
+        Map<String, Object> data = businessCustomer();
+        data.remove("incorporation_country");
+
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> customers.create(data));
+        assertEquals("incorporation_country is required when type is business", e.getMessage());
+    }
+
+    @Test
+    void createDoesNotRequireIdTypeOrNumberForBusinessType() {
+        // Personal-ID fields are individual-only; a business payload need not carry them.
         when(client.makeRequest(eq("POST"), eq("/api/external/customer"), anyMap(), isNull()))
                 .thenReturn(new BlaaizResponse(Map.of(), 200, null));
 
+        Map<String, Object> data = businessCustomer();
         customers.create(data);
 
         verify(client).makeRequest("POST", "/api/external/customer", data, null);
@@ -193,14 +242,213 @@ class CustomerServiceTest {
     }
 
     @Test
-    void uploadFilesPutsToFilesEndpoint() {
+    void uploadFilesPostsToFilesEndpoint() {
         Map<String, Object> files = Map.of("id_file", "file_123");
-        when(client.makeRequest(eq("PUT"), eq("/api/external/customer/cust_1/files"), anyMap(), isNull()))
+        when(client.makeRequest(eq("POST"), eq("/api/external/customer/cust_1/files"), anyMap(), isNull()))
                 .thenReturn(new BlaaizResponse(Map.of(), 200, null));
 
         customers.uploadFiles("cust_1", files);
 
-        verify(client).makeRequest("PUT", "/api/external/customer/cust_1/files", files, null);
+        verify(client).makeRequest("POST", "/api/external/customer/cust_1/files", files, null);
+    }
+
+    // ---- submit / KYB scope / owners ----
+
+    @Test
+    void submitRequiresCustomerId() {
+        assertThrows(IllegalArgumentException.class, () -> customers.submit(null));
+        verifyNoInteractions(client);
+    }
+
+    @Test
+    void submitPostsToSubmitEndpointWithNoBody() {
+        when(client.makeRequest(eq("POST"), eq("/api/external/customer/cust_1/submit"), isNull(), isNull()))
+                .thenReturn(new BlaaizResponse(Map.of(), 200, null));
+
+        customers.submit("cust_1");
+
+        verify(client).makeRequest("POST", "/api/external/customer/cust_1/submit", null, null);
+    }
+
+    @Test
+    void upgradeKybScopeRequiresCustomerId() {
+        assertThrows(IllegalArgumentException.class,
+                () -> customers.upgradeKybScope(null, Map.of("owners", List.of(Map.of("id", "o1")))));
+        verifyNoInteractions(client);
+    }
+
+    @Test
+    void upgradeKybScopeThrowsWhenOwnersMissingOrEmpty() {
+        IllegalArgumentException e1 = assertThrows(IllegalArgumentException.class,
+                () -> customers.upgradeKybScope("cust_1", new LinkedHashMap<>()));
+        assertEquals("owners is required", e1.getMessage());
+
+        Map<String, Object> emptyOwners = new LinkedHashMap<>();
+        emptyOwners.put("owners", List.of());
+        IllegalArgumentException e2 = assertThrows(IllegalArgumentException.class,
+                () -> customers.upgradeKybScope("cust_1", emptyOwners));
+        assertEquals("owners is required", e2.getMessage());
+        verifyNoInteractions(client);
+    }
+
+    @Test
+    void upgradeKybScopePostsToUpgradeEndpoint() {
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("owners", List.of(Map.of("first_name", "Jane", "ownership_percentage", 100)));
+        when(client.makeRequest(eq("POST"), eq("/api/external/customer/cust_1/upgrade-kyb-scope"), anyMap(), isNull()))
+                .thenReturn(new BlaaizResponse(Map.of(), 200, null));
+
+        customers.upgradeKybScope("cust_1", data);
+
+        verify(client).makeRequest("POST", "/api/external/customer/cust_1/upgrade-kyb-scope", data, null);
+    }
+
+    @Test
+    void deleteOwnerRequiresBothIds() {
+        assertThrows(IllegalArgumentException.class, () -> customers.deleteOwner(null, "own_1"));
+        assertThrows(IllegalArgumentException.class, () -> customers.deleteOwner("cust_1", null));
+        verifyNoInteractions(client);
+    }
+
+    @Test
+    void deleteOwnerSendsDeleteRequest() {
+        when(client.makeRequest(eq("DELETE"), eq("/api/external/customer/cust_1/owner/own_1"), isNull(), isNull()))
+                .thenReturn(new BlaaizResponse(Map.of(), 200, null));
+
+        customers.deleteOwner("cust_1", "own_1");
+
+        verify(client).makeRequest("DELETE", "/api/external/customer/cust_1/owner/own_1", null, null);
+    }
+
+    @Test
+    void getOwnerFilePresignedUrlRequiresFileCategory() {
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+                () -> customers.getOwnerFilePresignedUrl("cust_1", "own_1", new LinkedHashMap<>()));
+        assertEquals("file_category is required", e.getMessage());
+        verifyNoInteractions(client);
+    }
+
+    @Test
+    void getOwnerFilePresignedUrlPostsToEndpoint() {
+        Map<String, Object> data = Map.of("file_category", "id_document_front");
+        when(client.makeRequest(eq("POST"),
+                eq("/api/external/customer/cust_1/owner/own_1/file/presigned-url"), anyMap(), isNull()))
+                .thenReturn(new BlaaizResponse(Map.of(), 200, null));
+
+        customers.getOwnerFilePresignedUrl("cust_1", "own_1", data);
+
+        verify(client).makeRequest(
+                "POST", "/api/external/customer/cust_1/owner/own_1/file/presigned-url", data, null);
+    }
+
+    @Test
+    void uploadOwnerFilesRequiresIdDocumentFront() {
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+                () -> customers.uploadOwnerFiles("cust_1", "own_1", new LinkedHashMap<>()));
+        assertEquals("id_document_front is required", e.getMessage());
+        verifyNoInteractions(client);
+    }
+
+    @Test
+    void uploadOwnerFilesPostsToEndpoint() {
+        Map<String, Object> data = Map.of("id_document_front", "file_uuid_1");
+        when(client.makeRequest(eq("POST"), eq("/api/external/customer/cust_1/owner/own_1/files"), anyMap(), isNull()))
+                .thenReturn(new BlaaizResponse(Map.of(), 200, null));
+
+        customers.uploadOwnerFiles("cust_1", "own_1", data);
+
+        verify(client).makeRequest("POST", "/api/external/customer/cust_1/owner/own_1/files", data, null);
+    }
+
+    // ---- documents ----
+
+    @Test
+    void listDocumentsSendsGetRequest() {
+        when(client.makeRequest(eq("GET"), eq("/api/external/customer/cust_1/document"), isNull(), isNull()))
+                .thenReturn(new BlaaizResponse(Map.of(), 200, null));
+
+        customers.listDocuments("cust_1");
+
+        verify(client).makeRequest("GET", "/api/external/customer/cust_1/document", null, null);
+    }
+
+    @Test
+    void getDocumentRequiresBothIds() {
+        assertThrows(IllegalArgumentException.class, () -> customers.getDocument("cust_1", null));
+        assertThrows(IllegalArgumentException.class, () -> customers.getDocument(null, "doc_1"));
+        verifyNoInteractions(client);
+    }
+
+    @Test
+    void getDocumentSendsGetRequest() {
+        when(client.makeRequest(eq("GET"), eq("/api/external/customer/cust_1/document/doc_1"), isNull(), isNull()))
+                .thenReturn(new BlaaizResponse(Map.of(), 200, null));
+
+        customers.getDocument("cust_1", "doc_1");
+
+        verify(client).makeRequest("GET", "/api/external/customer/cust_1/document/doc_1", null, null);
+    }
+
+    @Test
+    void getDocumentPresignedUrlPostsWithNoBody() {
+        when(client.makeRequest(eq("POST"),
+                eq("/api/external/customer/cust_1/document/presigned-url"), isNull(), isNull()))
+                .thenReturn(new BlaaizResponse(Map.of(), 200, null));
+
+        customers.getDocumentPresignedUrl("cust_1");
+
+        verify(client).makeRequest("POST", "/api/external/customer/cust_1/document/presigned-url", null, null);
+    }
+
+    @Test
+    void createDocumentThrowsWhenRequiredFieldMissing() {
+        for (String field : new String[] {"type", "name", "file_id"}) {
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("type", "PROOF_OF_ADDRESS");
+            data.put("name", "Utility bill");
+            data.put("file_id", "file_uuid_1");
+            data.remove(field);
+
+            IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+                    () -> customers.createDocument("cust_1", data));
+            assertEquals(field + " is required", e.getMessage());
+        }
+        verifyNoInteractions(client);
+    }
+
+    @Test
+    void createDocumentPostsToDocumentEndpoint() {
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("type", "PROOF_OF_ADDRESS");
+        data.put("name", "Utility bill");
+        data.put("file_id", "file_uuid_1");
+        when(client.makeRequest(eq("POST"), eq("/api/external/customer/cust_1/document"), anyMap(), isNull()))
+                .thenReturn(new BlaaizResponse(Map.of(), 200, null));
+
+        customers.createDocument("cust_1", data);
+
+        verify(client).makeRequest("POST", "/api/external/customer/cust_1/document", data, null);
+    }
+
+    @Test
+    void updateDocumentSendsPutRequest() {
+        Map<String, Object> data = Map.of("name", "Renamed");
+        when(client.makeRequest(eq("PUT"), eq("/api/external/customer/cust_1/document/doc_1"), anyMap(), isNull()))
+                .thenReturn(new BlaaizResponse(Map.of(), 200, null));
+
+        customers.updateDocument("cust_1", "doc_1", data);
+
+        verify(client).makeRequest("PUT", "/api/external/customer/cust_1/document/doc_1", data, null);
+    }
+
+    @Test
+    void deleteDocumentSendsDeleteRequest() {
+        when(client.makeRequest(eq("DELETE"), eq("/api/external/customer/cust_1/document/doc_1"), isNull(), isNull()))
+                .thenReturn(new BlaaizResponse(Map.of(), 200, null));
+
+        customers.deleteDocument("cust_1", "doc_1");
+
+        verify(client).makeRequest("DELETE", "/api/external/customer/cust_1/document/doc_1", null, null);
     }
 
     // ---- beneficiaries ----

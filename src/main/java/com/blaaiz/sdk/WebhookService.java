@@ -42,14 +42,14 @@ public class WebhookService extends BaseService {
         return client.makeRequest("GET", "/api/external/webhook", null, null);
     }
 
-    /** No local validation -- {@code webhookData} is forwarded verbatim, matching all three source SDKs. */
-    public BlaaizResponse update(Map<String, Object> webhookData) {
-        return client.makeRequest("PUT", "/api/external/webhook", webhookData, null);
+    public BlaaizResponse update(String webhookId, Map<String, Object> webhookData) {
+        requireNonBlank(webhookId, "Webhook ID is required");
+        return client.makeRequest("PUT", "/api/external/webhook/" + webhookId, webhookData, null);
     }
 
     public BlaaizResponse replay(Map<String, Object> replayData) {
         requireFields(replayData, "transaction_id");
-        return client.makeRequest("POST", "/api/external/webhook/replay", replayData, null);
+        return client.makeRequest("POST", "/api/external/webhook-replay", replayData, null);
     }
 
     /**

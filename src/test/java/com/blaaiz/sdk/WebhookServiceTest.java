@@ -104,26 +104,22 @@ class WebhookServiceTest {
     // ---- update ----
 
     @Test
-    void updateForwardsDataVerbatimWithNoValidation() {
+    void updateTargetsTheWebhookRecordById() {
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("collection_url", "https://example.com/new-collect");
-        when(client.makeRequest(eq("PUT"), eq("/api/external/webhook"), eq(data), isNull()))
+        when(client.makeRequest(eq("PUT"), eq("/api/external/webhook/wh_1"), eq(data), isNull()))
                 .thenReturn(new BlaaizResponse(Map.of("updated", true), 200, null));
 
-        webhooks.update(data);
+        webhooks.update("wh_1", data);
 
-        verify(client).makeRequest("PUT", "/api/external/webhook", data, null);
+        verify(client).makeRequest("PUT", "/api/external/webhook/wh_1", data, null);
     }
 
     @Test
-    void updateAllowsEmptyMap() {
+    void updateRequiresWebhookId() {
         Map<String, Object> data = new LinkedHashMap<>();
-        when(client.makeRequest(eq("PUT"), eq("/api/external/webhook"), eq(data), isNull()))
-                .thenReturn(new BlaaizResponse(Map.of(), 200, null));
-
-        webhooks.update(data);
-
-        verify(client).makeRequest("PUT", "/api/external/webhook", data, null);
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> webhooks.update(null, data));
+        assertTrue(e.getMessage().contains("Webhook ID"));
     }
 
     // ---- replay ----
@@ -132,12 +128,12 @@ class WebhookServiceTest {
     void replaySendsTransactionId() {
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("transaction_id", "txn_1");
-        when(client.makeRequest(eq("POST"), eq("/api/external/webhook/replay"), eq(data), isNull()))
+        when(client.makeRequest(eq("POST"), eq("/api/external/webhook-replay"), eq(data), isNull()))
                 .thenReturn(new BlaaizResponse(Map.of("replayed", true), 200, null));
 
         webhooks.replay(data);
 
-        verify(client).makeRequest("POST", "/api/external/webhook/replay", data, null);
+        verify(client).makeRequest("POST", "/api/external/webhook-replay", data, null);
     }
 
     @Test

@@ -68,6 +68,29 @@ class TransactionServiceTest {
     }
 
     @Test
+    void listForwardsMerchantReferenceFilterInPostBody() {
+        Map<String, Object> filters = Map.of("merchant_reference", "order-123");
+        when(client.makeRequest(eq("POST"), eq("/api/external/transaction"), eq(filters), isNull()))
+                .thenReturn(new BlaaizResponse(List.of(), 200, null));
+
+        transactions.list(filters);
+
+        verify(client).makeRequest("POST", "/api/external/transaction", filters, null);
+    }
+
+    @Test
+    void getResolvesByMerchantReferenceInPath() {
+        // GET /transaction/{id} accepts a transaction id, reference, or merchant_reference.
+        when(client.makeRequest(eq("GET"), eq("/api/external/transaction/order-123"), isNull(), isNull()))
+                .thenReturn(new BlaaizResponse(Map.of("merchant_reference", "order-123"), 200, null));
+
+        BlaaizResponse result = transactions.get("order-123");
+
+        assertEquals(200, result.getStatus());
+        verify(client).makeRequest("GET", "/api/external/transaction/order-123", null, null);
+    }
+
+    @Test
     void listPropagatesBlaaizExceptionFromClient() {
         when(client.makeRequest(eq("POST"), eq("/api/external/transaction"), eq(Collections.emptyMap()), isNull()))
                 .thenThrow(new BlaaizException("API request failed", 500, "SERVER_ERROR"));

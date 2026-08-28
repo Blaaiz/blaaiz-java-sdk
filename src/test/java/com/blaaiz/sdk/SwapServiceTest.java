@@ -38,7 +38,7 @@ class SwapServiceTest {
         data.put("amount", 100);
 
         IllegalArgumentException e =
-                assertThrows(IllegalArgumentException.class, () -> swaps.swap(data));
+                assertThrows(IllegalArgumentException.class, () -> swaps.initiate(data));
         assertEquals("from_business_wallet_id is required", e.getMessage());
     }
 
@@ -49,7 +49,7 @@ class SwapServiceTest {
         data.put("amount", 100);
 
         IllegalArgumentException e =
-                assertThrows(IllegalArgumentException.class, () -> swaps.swap(data));
+                assertThrows(IllegalArgumentException.class, () -> swaps.initiate(data));
         assertEquals("to_business_wallet_id is required", e.getMessage());
     }
 
@@ -60,7 +60,7 @@ class SwapServiceTest {
         data.put("to_business_wallet_id", "w2");
 
         IllegalArgumentException e =
-                assertThrows(IllegalArgumentException.class, () -> swaps.swap(data));
+                assertThrows(IllegalArgumentException.class, () -> swaps.initiate(data));
         assertEquals("amount is required", e.getMessage());
     }
 
@@ -74,14 +74,14 @@ class SwapServiceTest {
         data.put("amount", 0);
 
         IllegalArgumentException e =
-                assertThrows(IllegalArgumentException.class, () -> swaps.swap(data));
+                assertThrows(IllegalArgumentException.class, () -> swaps.initiate(data));
         assertEquals("amount is required", e.getMessage());
     }
 
     @Test
     void swapThrowsOnEmptyMap() {
         IllegalArgumentException e =
-                assertThrows(IllegalArgumentException.class, () -> swaps.swap(new LinkedHashMap<>()));
+                assertThrows(IllegalArgumentException.class, () -> swaps.initiate(new LinkedHashMap<>()));
         assertEquals("from_business_wallet_id is required", e.getMessage());
     }
 
@@ -90,7 +90,7 @@ class SwapServiceTest {
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("from_business_wallet_id", "w1");
 
-        assertThrows(IllegalArgumentException.class, () -> swaps.swap(data));
+        assertThrows(IllegalArgumentException.class, () -> swaps.initiate(data));
 
         org.mockito.Mockito.verifyNoInteractions(client);
     }
@@ -109,7 +109,7 @@ class SwapServiceTest {
         when(client.makeRequest(eq("POST"), eq("/api/external/swap"), eq(data), isNull()))
                 .thenReturn(response);
 
-        BlaaizResponse result = swaps.swap(data);
+        BlaaizResponse result = swaps.initiate(data);
 
         assertEquals(response, result);
         verify(client).makeRequest("POST", "/api/external/swap", data, null);
@@ -130,7 +130,7 @@ class SwapServiceTest {
         when(client.makeRequest(eq("POST"), eq("/api/external/swap"), eq(data), isNull()))
                 .thenReturn(response);
 
-        BlaaizResponse result = swaps.swap(data);
+        BlaaizResponse result = swaps.initiate(data);
 
         assertEquals(response, result);
         verify(client).makeRequest("POST", "/api/external/swap", data, null);
@@ -148,9 +148,23 @@ class SwapServiceTest {
         when(client.makeRequest(eq("POST"), eq("/api/external/swap"), eq(data), isNull()))
                 .thenThrow(new BlaaizException("Insufficient balance", 400, "INSUFFICIENT_BALANCE"));
 
-        BlaaizException e = assertThrows(BlaaizException.class, () -> swaps.swap(data));
+        BlaaizException e = assertThrows(BlaaizException.class, () -> swaps.initiate(data));
         assertEquals("Insufficient balance", e.getMessage());
         assertEquals(400, e.getStatus());
         assertEquals("INSUFFICIENT_BALANCE", e.getErrorCode());
+    }
+
+    @Test
+    void swapIsADeprecatedAliasOfInitiate() {
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("from_business_wallet_id", "a");
+        data.put("to_business_wallet_id", "b");
+        data.put("amount", 10);
+        when(client.makeRequest(eq("POST"), eq("/api/external/swap"), eq(data), isNull()))
+                .thenReturn(new BlaaizResponse(Map.of("status", "SUCCESSFUL"), 200, null));
+
+        swaps.swap(data);
+
+        verify(client).makeRequest("POST", "/api/external/swap", data, null);
     }
 }

@@ -57,18 +57,23 @@ public class CustomerService extends BaseService {
     }
 
     public BlaaizResponse create(Map<String, Object> customerData) {
-        requireFields(customerData, "type", "email", "country", "id_type", "id_number");
+        requireFields(customerData, "type", "email", "country");
 
         Object type = customerData.get("type");
         if ("individual".equals(type)) {
-            if (isBlank(customerData.get("first_name"))) {
-                throw new IllegalArgumentException("first_name is required when type is individual");
+            // Personal-ID fields identify an individual; they are prohibited for businesses.
+            for (String field : new String[] {"first_name", "last_name", "id_type", "id_number"}) {
+                if (isBlank(customerData.get(field))) {
+                    throw new IllegalArgumentException(field + " is required when type is individual");
+                }
             }
-            if (isBlank(customerData.get("last_name"))) {
-                throw new IllegalArgumentException("last_name is required when type is individual");
+        } else if ("business".equals(type)) {
+            // Businesses identify via registration_number + incorporation_country, not personal ID.
+            for (String field : new String[] {"business_name", "registration_number", "incorporation_country"}) {
+                if (isBlank(customerData.get(field))) {
+                    throw new IllegalArgumentException(field + " is required when type is business");
+                }
             }
-        } else if ("business".equals(type) && isBlank(customerData.get("business_name"))) {
-            throw new IllegalArgumentException("business_name is required when type is business");
         }
 
         return client.makeRequest("POST", "/api/external/customer", customerData, null);
@@ -95,7 +100,7 @@ public class CustomerService extends BaseService {
 
     public BlaaizResponse uploadFiles(String customerId, Map<String, Object> fileData) {
         requireNonBlank(customerId, "Customer ID is required");
-        return client.makeRequest("PUT", "/api/external/customer/" + customerId + "/files", fileData, null);
+        return client.makeRequest("POST", "/api/external/customer/" + customerId + "/files", fileData, null);
     }
 
     public BlaaizResponse listBeneficiaries(String customerId) {
@@ -108,6 +113,108 @@ public class CustomerService extends BaseService {
         requireNonBlank(beneficiaryId, "Beneficiary ID is required");
         return client.makeRequest("GET",
                 "/api/external/customer/" + customerId + "/beneficiary/" + beneficiaryId, null, null);
+    }
+
+    /** Submits the customer for KYC/KYB verification. Takes no body. */
+    public BlaaizResponse submit(String customerId) {
+        requireNonBlank(customerId, "Customer ID is required");
+        return client.makeRequest("POST", "/api/external/customer/" + customerId + "/submit", null, null);
+    }
+
+    /**
+     * Upgrades a business customer from MINIMAL to FULL KYB scope.
+     *
+     * @param upgradeData must contain a non-empty {@code owners} list (ownership summing to 100).
+     */
+    public BlaaizResponse upgradeKybScope(String customerId, Map<String, Object> upgradeData) {
+        requireNonBlank(customerId, "Customer ID is required");
+        Object owners = upgradeData != null ? upgradeData.get("owners") : null;
+        if (!(owners instanceof java.util.List) || ((java.util.List<?>) owners).isEmpty()) {
+            throw new IllegalArgumentException("owners is required");
+        }
+        return client.makeRequest(
+                "POST", "/api/external/customer/" + customerId + "/upgrade-kyb-scope", upgradeData, null);
+    }
+
+    public BlaaizResponse deleteOwner(String customerId, String ownerId) {
+        requireNonBlank(customerId, "Customer ID is required");
+        requireNonBlank(ownerId, "Owner ID is required");
+        return client.makeRequest(
+                "DELETE", "/api/external/customer/" + customerId + "/owner/" + ownerId, null, null);
+    }
+
+    /**
+     * Requests a presigned S3 URL for a business owner's identity document.
+     *
+     * @param presignedData must contain {@code file_category} ({@code id_document_front} or
+     *                      {@code id_document_back}).
+     */
+    public BlaaizResponse getOwnerFilePresignedUrl(String customerId, String ownerId, Map<String, Object> presignedData) {
+        requireNonBlank(customerId, "Customer ID is required");
+        requireNonBlank(ownerId, "Owner ID is required");
+        requireFields(presignedData, "file_category");
+        return client.makeRequest(
+                "POST", "/api/external/customer/" + customerId + "/owner/" + ownerId + "/file/presigned-url",
+                presignedData, null);
+    }
+
+    /**
+     * Associates uploaded identity files with a business owner.
+     *
+     * @param fileData must contain {@code id_document_front} (uuid). Optional
+     *                 {@code id_document_back} (uuid) is forwarded verbatim.
+     */
+    public BlaaizResponse uploadOwnerFiles(String customerId, String ownerId, Map<String, Object> fileData) {
+        requireNonBlank(customerId, "Customer ID is required");
+        requireNonBlank(ownerId, "Owner ID is required");
+        requireFields(fileData, "id_document_front");
+        return client.makeRequest(
+                "POST", "/api/external/customer/" + customerId + "/owner/" + ownerId + "/files", fileData, null);
+    }
+
+    public BlaaizResponse listDocuments(String customerId) {
+        requireNonBlank(customerId, "Customer ID is required");
+        return client.makeRequest("GET", "/api/external/customer/" + customerId + "/document", null, null);
+    }
+
+    public BlaaizResponse getDocument(String customerId, String documentId) {
+        requireNonBlank(customerId, "Customer ID is required");
+        requireNonBlank(documentId, "Document ID is required");
+        return client.makeRequest(
+                "GET", "/api/external/customer/" + customerId + "/document/" + documentId, null, null);
+    }
+
+    /** Requests a presigned S3 URL for a customer document upload. Takes no body. */
+    public BlaaizResponse getDocumentPresignedUrl(String customerId) {
+        requireNonBlank(customerId, "Customer ID is required");
+        return client.makeRequest(
+                "POST", "/api/external/customer/" + customerId + "/document/presigned-url", null, null);
+    }
+
+    /**
+     * @param documentData must contain {@code type} (a supported document-type enum value),
+     *                     {@code name}, and {@code file_id} (uuid). Optional {@code description}
+     *                     is forwarded verbatim.
+     */
+    public BlaaizResponse createDocument(String customerId, Map<String, Object> documentData) {
+        requireNonBlank(customerId, "Customer ID is required");
+        requireFields(documentData, "type", "name", "file_id");
+        return client.makeRequest("POST", "/api/external/customer/" + customerId + "/document", documentData, null);
+    }
+
+    /** @param documentData all fields optional; forwarded verbatim. */
+    public BlaaizResponse updateDocument(String customerId, String documentId, Map<String, Object> documentData) {
+        requireNonBlank(customerId, "Customer ID is required");
+        requireNonBlank(documentId, "Document ID is required");
+        return client.makeRequest(
+                "PUT", "/api/external/customer/" + customerId + "/document/" + documentId, documentData, null);
+    }
+
+    public BlaaizResponse deleteDocument(String customerId, String documentId) {
+        requireNonBlank(customerId, "Customer ID is required");
+        requireNonBlank(documentId, "Document ID is required");
+        return client.makeRequest(
+                "DELETE", "/api/external/customer/" + customerId + "/document/" + documentId, null, null);
     }
 
     /**

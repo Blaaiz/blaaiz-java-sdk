@@ -85,6 +85,7 @@ class BlaaizTest {
         assertNotNull(blaaiz.webhooks());
         assertNotNull(blaaiz.rates());
         assertNotNull(blaaiz.swaps());
+        assertNotNull(blaaiz.refunds());
     }
 
     @Test
@@ -283,8 +284,7 @@ class BlaaizTest {
         Map<String, Object> collectionData = new LinkedHashMap<>();
         collectionData.put("wallet_id", "wallet-1");
         collectionData.put("amount", 100);
-        collectionData.put("currency", "NGN");
-        collectionData.put("method", "bank_transfer");
+        collectionData.put("method", "open_banking");
 
         CompleteCollectionResult result = blaaiz.createCompleteCollection(new CompleteCollectionConfig()
                 .customerData(customerData)
@@ -313,8 +313,7 @@ class BlaaizTest {
         collectionData.put("customer_id", "cust-1");
         collectionData.put("wallet_id", "wallet-1");
         collectionData.put("amount", 100);
-        collectionData.put("currency", "NGN");
-        collectionData.put("method", "bank_transfer");
+        collectionData.put("method", "open_banking");
 
         CompleteCollectionResult result = blaaiz.createCompleteCollection(
                 new CompleteCollectionConfig().collectionData(collectionData));
@@ -337,8 +336,7 @@ class BlaaizTest {
         collectionData.put("customer_id", "cust-1");
         collectionData.put("wallet_id", "wallet-1");
         collectionData.put("amount", 100);
-        collectionData.put("currency", "NGN");
-        collectionData.put("method", "bank_transfer");
+        collectionData.put("method", "open_banking");
 
         blaaiz.createCompleteCollection(new CompleteCollectionConfig()
                 .collectionData(collectionData)

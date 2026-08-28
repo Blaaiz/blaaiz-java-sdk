@@ -20,7 +20,16 @@ BlaaizResponse page = blaaiz.transactions().list(Map.of(
         "page", 1,
         "limit", 10,
         "status", "SUCCESSFUL"));
+
+// Filter by merchant reference
+BlaaizResponse byMerchantReference = blaaiz.transactions().list(Map.of(
+        "merchant_reference", "invoice-2001"));
 ```
+
+Supported filters include `start_date`, `end_date`, `wallet_id`, `customer_id`, `type`
+(`SEND_MONEY`, `FUND_WALLET`, or `SWAP`), `status` (`FAILED`, `SUCCESSFUL`, or `EXPIRED`), and
+`merchant_reference`. Each transaction in the response carries a `merchant_reference` value,
+which is `null` when the transaction has none.
 
 ### `get(String transactionId)`
 
@@ -29,6 +38,9 @@ BlaaizResponse page = blaaiz.transactions().list(Map.of(
 ```java
 BlaaizResponse transaction = blaaiz.transactions().get("transaction-id");
 ```
+
+The `get()` argument accepts a transaction id, a reference, or a merchant reference. The API
+resolves the value in that order.
 
 Throws `IllegalArgumentException` when `transactionId` is `null` or empty.
 
@@ -45,6 +57,9 @@ payout.
 
 ```java
 BlaaizResponse banks = blaaiz.banks().list();
+
+// Filter by currency, country, or country_id
+BlaaizResponse ngnBanks = blaaiz.banks().list(Map.of("currency", "NGN"));
 ```
 
 ### `lookupAccount(Map<String, Object> lookupData)`
@@ -63,6 +78,42 @@ Required:
 
 - `account_number`
 - `bank_id`
+
+### `verifyPayee(Map<String, Object> payeeData)`
+
+`POST /api/external/bank/payee-verification`
+
+Runs a Confirmation of Payee check for a UK account. The response holds `matched`,
+`match_confidence_code`, and `suggested_account_name`.
+
+```java
+BlaaizResponse payee = blaaiz.banks().verifyPayee(Map.of(
+        "sort_code", "123456",
+        "account_number", "12345678",
+        "account_name", "John Doe"));
+```
+
+Required:
+
+- `sort_code`
+- `account_number`
+- `account_name`
+
+### `verifyIban(Map<String, Object> ibanData)`
+
+`POST /api/external/bank/iban-verification`
+
+Checks the SEPA reachability of an IBAN. The response holds `sepa_reachable` and
+`sepa_inst_reachable`.
+
+```java
+BlaaizResponse iban = blaaiz.banks().verifyIban(Map.of(
+        "iban", "DE89370400440532013000"));
+```
+
+Required:
+
+- `iban`
 
 ## Currencies
 
@@ -94,7 +145,3 @@ SDK sends it as the `search_term` query parameter.
 BlaaizResponse allRates = blaaiz.rates().list(null);
 BlaaizResponse ngnRates = blaaiz.rates().list("NGN");
 ```
-
-**Note:** Only the Laravel SDK and this SDK have a rate service. The Node.js and Python SDKs
-have no equivalent. Check the endpoint against the live API before you depend on it in
-production.

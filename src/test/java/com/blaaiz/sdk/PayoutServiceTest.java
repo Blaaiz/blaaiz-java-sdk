@@ -68,6 +68,17 @@ class PayoutServiceTest {
     }
 
     @Test
+    void initiateForwardsOptionalMerchantReferenceVerbatim() {
+        stubOk();
+        Map<String, Object> data = ngnBankTransfer();
+        data.put("merchant_reference", "order-123");
+
+        payouts.initiate(data);
+
+        verify(client).makeRequest("POST", "/api/external/payout", data, null);
+    }
+
+    @Test
     void initiateAcceptsToAmountInPlaceOfFromAmount() {
         stubOk();
         Map<String, Object> data = ngnBankTransfer();

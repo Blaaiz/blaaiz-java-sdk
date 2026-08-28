@@ -63,6 +63,87 @@ class BankServiceTest {
         assertEquals("SERVER_ERROR", e.getErrorCode());
     }
 
+    @Test
+    void listSendsFiltersAsQueryParams() {
+        Map<String, Object> filters = new LinkedHashMap<>();
+        filters.put("currency", "NGN");
+        filters.put("country", "NG");
+        BlaaizResponse response = new BlaaizResponse(List.of(), 200, null);
+        when(client.makeRequest(eq("GET"), eq("/api/external/bank"), eq(filters), isNull())).thenReturn(response);
+
+        BlaaizResponse result = banks.list(filters);
+
+        assertEquals(response, result);
+        verify(client).makeRequest("GET", "/api/external/bank", filters, null);
+    }
+
+    @Test
+    void listSendsNoParamsWhenFiltersEmpty() {
+        BlaaizResponse response = new BlaaizResponse(List.of(), 200, null);
+        when(client.makeRequest(eq("GET"), eq("/api/external/bank"), isNull(), isNull())).thenReturn(response);
+
+        banks.list(new LinkedHashMap<>());
+
+        verify(client).makeRequest("GET", "/api/external/bank", null, null);
+    }
+
+    // ---- verifyPayee ----
+
+    @Test
+    void verifyPayeeSendsPostToPayeeVerificationEndpoint() {
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("sort_code", "123456");
+        data.put("account_number", "12345678");
+        data.put("account_name", "John Doe");
+        BlaaizResponse response = new BlaaizResponse(Map.of("matched", true), 200, null);
+        when(client.makeRequest(eq("POST"), eq("/api/external/bank/payee-verification"), eq(data), isNull()))
+                .thenReturn(response);
+
+        BlaaizResponse result = banks.verifyPayee(data);
+
+        assertEquals(response, result);
+        verify(client).makeRequest("POST", "/api/external/bank/payee-verification", data, null);
+    }
+
+    @Test
+    void verifyPayeeThrowsWhenRequiredFieldMissing() {
+        for (String field : new String[] {"sort_code", "account_number", "account_name"}) {
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("sort_code", "123456");
+            data.put("account_number", "12345678");
+            data.put("account_name", "John Doe");
+            data.remove(field);
+
+            IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> banks.verifyPayee(data));
+            assertEquals(field + " is required", e.getMessage());
+        }
+        verifyNoInteractions(client);
+    }
+
+    // ---- verifyIban ----
+
+    @Test
+    void verifyIbanSendsPostToIbanVerificationEndpoint() {
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("iban", "DE89370400440532013000");
+        BlaaizResponse response = new BlaaizResponse(Map.of("sepa_reachable", true), 200, null);
+        when(client.makeRequest(eq("POST"), eq("/api/external/bank/iban-verification"), eq(data), isNull()))
+                .thenReturn(response);
+
+        BlaaizResponse result = banks.verifyIban(data);
+
+        assertEquals(response, result);
+        verify(client).makeRequest("POST", "/api/external/bank/iban-verification", data, null);
+    }
+
+    @Test
+    void verifyIbanThrowsWhenIbanMissing() {
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+                () -> banks.verifyIban(new LinkedHashMap<>()));
+        assertEquals("iban is required", e.getMessage());
+        verifyNoInteractions(client);
+    }
+
     // ---- lookupAccount ----
 
     @Test

@@ -21,6 +21,9 @@ public class PayoutService extends BaseService {
      *                   {@code wallet_address}/{@code wallet_token}/{@code wallet_network}. An
      *                   optional {@code note} string is forwarded verbatim (populates the
      *                   transaction description; defaults to the business name when omitted).
+     *                   Optional {@code merchant_reference} (max 255, unique per business) is
+     *                   forwarded verbatim and echoed on the resulting transaction; a duplicate
+     *                   value for the same business is rejected by the API with HTTP 422.
      */
     public BlaaizResponse initiate(Map<String, Object> payoutData) {
         requireFields(payoutData, "wallet_id", "customer_id", "method", "from_currency_id", "to_currency_id");
