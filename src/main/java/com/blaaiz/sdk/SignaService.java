@@ -125,6 +125,51 @@ public class SignaService extends BaseService {
                 "POST", BASE_PATH + "/" + encodePathSegment(sessionId) + "/verification-link", null, null);
     }
 
+    /**
+     * Returns the applicant data captured for the session: name, date of birth, nationality,
+     * address, and the presented identity document. The response data is {@code null} when the
+     * session has a verdict but no applicant data was captured. Requires the
+     * {@code compliance-kyc:pii:read} scope, which Blaaiz grants to a credential only on request.
+     * Returns 409 until the session reaches {@code APPROVED} or {@code REJECTED}.
+     *
+     * <p><b>Warning:</b> the response carries personal data. The API sends
+     * {@code Cache-Control: no-store}; do not log or cache the response body.
+     */
+    public BlaaizResponse getSessionApplicantData(String sessionId) {
+        requireNonBlank(sessionId, "Session ID is required");
+        return client.makeRequest(
+                "GET", BASE_PATH + "/" + encodePathSegment(sessionId) + "/applicant-data", null, null);
+    }
+
+    /**
+     * Lists the documents captured for the session: kind, side, content type, and whether the
+     * bytes are still retained. Requires the {@code compliance-kyc:pii:read} scope. Returns 409
+     * until the session reaches {@code APPROVED} or {@code REJECTED}.
+     */
+    public BlaaizResponse listSessionDocuments(String sessionId) {
+        requireNonBlank(sessionId, "Session ID is required");
+        return client.makeRequest(
+                "GET", BASE_PATH + "/" + encodePathSegment(sessionId) + "/documents", null, null);
+    }
+
+    /**
+     * Returns a 15-minute download link for one document -- never the bytes themselves.
+     * Requires the {@code compliance-kyc:pii:read} scope. Returns 409 until the session reaches
+     * {@code APPROVED} or {@code REJECTED}, and 410 once the document is no
+     * longer retained. Rate limited to 30 requests per minute and 600 per hour per business
+     * (429 above that).
+     *
+     * <p><b>Warning:</b> the response carries personal data. The API sends
+     * {@code Cache-Control: no-store}; do not log or cache the response body.
+     */
+    public BlaaizResponse getSessionDocument(String sessionId, String documentId) {
+        requireNonBlank(sessionId, "Session ID is required");
+        requireNonBlank(documentId, "Document ID is required");
+        return client.makeRequest(
+                "GET", BASE_PATH + "/" + encodePathSegment(sessionId) + "/documents/"
+                        + encodePathSegment(documentId), null, null);
+    }
+
     // Short aliases mirror the create/list/get style used by the other SDK resources.
 
     public BlaaizResponse create(Map<String, Object> sessionData) {

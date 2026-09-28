@@ -233,6 +233,9 @@ class SignaServiceTest {
             assertSessionIdRequired(() -> signa.createDocumentUploadUrl(sessionId, validUploadUrlData()));
             assertSessionIdRequired(() -> signa.uploadSessionDocument(sessionId, validDocumentData("content_base64", "aGVsbG8=")));
             assertSessionIdRequired(() -> signa.issueVerificationLink(sessionId));
+            assertSessionIdRequired(() -> signa.getSessionApplicantData(sessionId));
+            assertSessionIdRequired(() -> signa.listSessionDocuments(sessionId));
+            assertSessionIdRequired(() -> signa.getSessionDocument(sessionId, "doc-1"));
         }
         verifyNoInteractions(client);
     }
@@ -472,6 +475,87 @@ class SignaServiceTest {
 
         assertEquals(response, result);
         verify(client).makeRequest("POST", BASE_PATH + "/session-123/verification-link", null, null);
+    }
+
+    // ---- getSessionApplicantData / listSessionDocuments / getSessionDocument ----
+
+    @Test
+    void getSessionApplicantDataSendsGetToApplicantDataEndpoint() {
+        BlaaizResponse response = new BlaaizResponse(Map.of("session_id", "session-123"), 200, null);
+        when(client.makeRequest(eq("GET"), eq(BASE_PATH + "/session-123/applicant-data"), isNull(), isNull()))
+                .thenReturn(response);
+
+        BlaaizResponse result = signa.getSessionApplicantData("session-123");
+
+        assertEquals(response, result);
+        verify(client).makeRequest("GET", BASE_PATH + "/session-123/applicant-data", null, null);
+    }
+
+    @Test
+    void getSessionApplicantDataEncodesTheSessionIdPathSegment() {
+        BlaaizResponse response = new BlaaizResponse(null, 200, null);
+        when(client.makeRequest(eq("GET"), eq(BASE_PATH + "/session%2F123/applicant-data"), isNull(), isNull()))
+                .thenReturn(response);
+
+        signa.getSessionApplicantData("session/123");
+
+        verify(client).makeRequest("GET", BASE_PATH + "/session%2F123/applicant-data", null, null);
+    }
+
+    @Test
+    void listSessionDocumentsSendsGetToDocumentsEndpoint() {
+        BlaaizResponse response = new BlaaizResponse(List.of(), 200, null);
+        when(client.makeRequest(eq("GET"), eq(BASE_PATH + "/session-123/documents"), isNull(), isNull()))
+                .thenReturn(response);
+
+        BlaaizResponse result = signa.listSessionDocuments("session-123");
+
+        assertEquals(response, result);
+        verify(client).makeRequest("GET", BASE_PATH + "/session-123/documents", null, null);
+    }
+
+    @Test
+    void listSessionDocumentsEncodesTheSessionIdPathSegment() {
+        BlaaizResponse response = new BlaaizResponse(List.of(), 200, null);
+        when(client.makeRequest(eq("GET"), eq(BASE_PATH + "/session%2F123/documents"), isNull(), isNull()))
+                .thenReturn(response);
+
+        signa.listSessionDocuments("session/123");
+
+        verify(client).makeRequest("GET", BASE_PATH + "/session%2F123/documents", null, null);
+    }
+
+    @Test
+    void getSessionDocumentSendsGetToDocumentEndpoint() {
+        BlaaizResponse response = new BlaaizResponse(Map.of("url", "https://s3.example/x"), 200, null);
+        when(client.makeRequest(eq("GET"), eq(BASE_PATH + "/session-123/documents/doc-1"), isNull(), isNull()))
+                .thenReturn(response);
+
+        BlaaizResponse result = signa.getSessionDocument("session-123", "doc-1");
+
+        assertEquals(response, result);
+        verify(client).makeRequest("GET", BASE_PATH + "/session-123/documents/doc-1", null, null);
+    }
+
+    @Test
+    void getSessionDocumentEncodesBothIdsIndependently() {
+        BlaaizResponse response = new BlaaizResponse(Map.of(), 200, null);
+        when(client.makeRequest(eq("GET"), eq(BASE_PATH + "/session%2F123/documents/doc%2F1"), isNull(), isNull()))
+                .thenReturn(response);
+
+        signa.getSessionDocument("session/123", "doc/1");
+
+        verify(client).makeRequest("GET", BASE_PATH + "/session%2F123/documents/doc%2F1", null, null);
+    }
+
+    @Test
+    void getSessionDocumentThrowsWhenDocumentIdMissing() {
+        for (String documentId : new String[] {null, ""}) {
+            IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+                    () -> signa.getSessionDocument("session-123", documentId));
+            assertEquals("Document ID is required", e.getMessage());
+        }
+        verifyNoInteractions(client);
     }
 
     // ---- aliases delegate ----
