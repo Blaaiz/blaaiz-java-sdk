@@ -33,7 +33,7 @@
     <dependency>
       <groupId>com.blaaiz</groupId>
       <artifactId>blaaiz-java-sdk</artifactId>
-      <version>1.4.0</version>
+      <version>1.4.0</version> <!-- x-release-please-version -->
     </dependency>
   </dependencies>
 

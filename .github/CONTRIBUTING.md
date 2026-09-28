@@ -87,6 +87,8 @@ a Javadoc comment. Do not make one SDK different on its own.
 4. Make sure all CI checks pass.
 5. Ask a maintainer for a review.
 
+See [RELEASING.md](../RELEASING.md) for how a merged pull request becomes a published release.
+
 ## Reporting Issues
 
 - Use GitHub Issues for bug reports and feature requests.

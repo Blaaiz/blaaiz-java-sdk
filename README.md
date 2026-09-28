@@ -9,6 +9,7 @@ Requires JDK 11 or later.
 
 ### Maven
 
+<!-- x-release-please-start-version -->
 ```xml
 <dependency>
   <groupId>com.blaaiz</groupId>
@@ -22,6 +23,7 @@ Requires JDK 11 or later.
 ```groovy
 implementation 'com.blaaiz:blaaiz-java-sdk:1.4.0'
 ```
+<!-- x-release-please-end -->
 
 ## Quick Start
 
