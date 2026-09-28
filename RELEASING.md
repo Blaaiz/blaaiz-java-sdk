@@ -21,6 +21,11 @@ This document explains how a release reaches Maven Central. It is for maintainer
 
 - Do not change the version by hand.
 - Do not create a tag or a GitHub Release by hand.
+- Merge a pull request with **Create a merge commit**, and give it a plain title that is not a
+  Conventional Commit. GitHub copies the title into the merge commit, and release-please reads a
+  Conventional Commit title there as an extra changelog line.
+- Do not squash-merge a pull request that has a plain title. release-please then ignores all of its
+  changes.
 
 ## Keep the SDKs on one version
 
@@ -51,10 +56,10 @@ release onward.
 
 ## Note on the release pull request
 
-GitHub does not run CI checks on a pull request that `GITHUB_TOKEN` opens, so the release pull
-request shows no checks. This is expected: the pull request only changes version strings and
-`CHANGELOG.md`. After you merge it, CI runs on `main` as normal, and the `publish` job waits for
-the `test` job to pass before it runs.
+GitHub holds the CI runs of a pull request that GitHub Actions opens. To run CI on the release PR,
+select **Approve and run** on it. The `publish` job does not run on a pull request. The release PR
+changes only version strings, `.release-please-manifest.json`, and `CHANGELOG.md`. After you merge
+it, CI runs on `main`, and the `publish` job waits for the tests to pass first.
 
 ## Required setup
 
