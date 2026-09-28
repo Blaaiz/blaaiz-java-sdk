@@ -45,7 +45,7 @@ public class BlaaizClient {
             "collection:create", "collection:crypto:create", "collection:interac:accept",
             "payout:create", "swap:create", "transaction:read", "fees:read", "file:upload",
             "webhook:read", "webhook:write", "webhook:replay", "rates:read",
-            "compliance-kyc:read", "compliance-kyc:create", "compliance-kyc:cancel"
+            "compliance-kyc:read", "compliance-kyc:create", "compliance-kyc:cancel", "compliance-kyc:pii:read"
     ));
 
     private static final Map<String, String> MIME_TO_EXTENSION;
@@ -126,7 +126,7 @@ public class BlaaizClient {
                 .build();
     }
 
-    /** The 24 canonical OAuth scopes, in fixed order. */
+    /** The 25 canonical OAuth scopes, in fixed order. */
     public static List<String> allScopes() {
         return ALL_SCOPES;
     }

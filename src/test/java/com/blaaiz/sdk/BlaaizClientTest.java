@@ -93,12 +93,12 @@ class BlaaizClientTest {
     void allScopesReturnsCanonicalScopesInOrder() {
         // Must stay identical to ALL_SCOPES in the Node.js, Python, and Laravel SDKs.
         List<String> scopes = BlaaizClient.allScopes();
-        assertEquals(24, scopes.size());
+        assertEquals(25, scopes.size());
         assertEquals("wallet:read", scopes.get(0));
-        assertEquals("compliance-kyc:cancel", scopes.get(scopes.size() - 1));
+        assertEquals("compliance-kyc:pii:read", scopes.get(scopes.size() - 1));
         assertTrue(scopes.contains("swap:create"));
-        assertTrue(scopes.containsAll(
-                List.of("compliance-kyc:read", "compliance-kyc:create", "compliance-kyc:cancel")));
+        assertEquals(List.of("compliance-kyc:read", "compliance-kyc:create", "compliance-kyc:cancel",
+                "compliance-kyc:pii:read"), scopes.subList(21, 25));
     }
 
     // ---- makeRequest happy path ----
