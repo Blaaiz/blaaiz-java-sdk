@@ -1,0 +1,48 @@
+name: Security Audit
+
+# OWASP dependency-check downloads the whole NVD CVE database, which takes tens of minutes
+# without an NVD_API_KEY. It runs in its own weekly workflow so that it never holds up CI
+# or a release on main. Dependabot covers the gap between runs.
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  security-audit:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      # Without this cache every run re-downloads the full NVD feed.
+      - name: Cache the NVD data
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository/org/owasp/dependency-check-data
+          key: dependency-check-data-${{ github.run_id }}
+          restore-keys: dependency-check-data-
+
+      # Fails the job on any dependency with a CVSS score of 7.0 or higher.
+      # Set the NVD_API_KEY repository secret to raise the NVD rate limit.
+      - name: OWASP dependency check
+        run: >
+          mvn -B org.owasp:dependency-check-maven:10.0.3:check
+          -DfailBuildOnCVSS=7
+          -DassemblyAnalyzerEnabled=false
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
