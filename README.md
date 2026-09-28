@@ -63,7 +63,7 @@ Blaaiz blaaiz = new Blaaiz(new BlaaizClientOptions()
 );
 ```
 
-When you do not set `oauthScope`, the SDK requests all 24 supported scopes. To see the list,
+When you do not set `oauthScope`, the SDK requests all 25 supported scopes. To see the list,
 call `BlaaizClient.allScopes()`.
 
 Token refresh is thread-safe. Concurrent requests share one cached token.
@@ -801,6 +801,12 @@ For a `HOSTED` session, issue or rotate the customer's verification link:
 BlaaizResponse link = blaaiz.signa().issueVerificationLink("hosted-session-id");
 ```
 
+Once a session reaches a verdict, `getSessionApplicantData`, `listSessionDocuments`, and
+`getSessionDocument` read the personal data that Signa captured. These three methods need the
+`compliance-kyc:pii:read` scope, which Blaaiz grants to a credential only on request. See
+[Read captured data](docs/signa.md#read-captured-data) for the full reference and its
+personal-data warning.
+
 The `docs/signa.md` page has the full method reference, including the validation rules and the
 HOSTED/HEADLESS restrictions.
 
@@ -1130,7 +1136,7 @@ Blaaiz prod = new Blaaiz(new BlaaizClientOptions()
 | ----------------------- | ------------------------------------------------------ |
 | `BLAAIZ_CLIENT_ID`      | The OAuth client ID                                     |
 | `BLAAIZ_CLIENT_SECRET`  | The OAuth client secret                                 |
-| `BLAAIZ_OAUTH_SCOPE`    | The OAuth scopes; defaults to all 24 scopes             |
+| `BLAAIZ_OAUTH_SCOPE`    | The OAuth scopes; defaults to all 25 scopes             |
 | `BLAAIZ_API_KEY`        | The legacy API key                                      |
 | `BLAAIZ_API_URL`        | The base URL; defaults to the dev environment           |
 | `BLAAIZ_WEBHOOK_SECRET` | The secret for webhook signature verification           |

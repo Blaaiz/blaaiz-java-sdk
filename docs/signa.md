@@ -25,8 +25,9 @@ String sessionId = String.valueOf(data.get("id"));
 ```
 
 Six methods have a short alias: `create`, `list`, `get`, `submit`, `cancel`, and
-`uploadDocument`. Each alias calls its full-name method. `createDocumentUploadUrl` and
-`issueVerificationLink` have no alias.
+`uploadDocument`. Each alias calls its full-name method. `createDocumentUploadUrl`,
+`issueVerificationLink`, and the three methods in [Read captured data](#read-captured-data) have
+no alias.
 
 ## `createSession(Map<String, Object> sessionData)`
 
@@ -207,18 +208,99 @@ BlaaizResponse link = blaaiz.signa().issueVerificationLink("session-id");
 
 Response data: `{ verification_link, link_expires_at }`.
 
+## Read captured data
+
+Three methods read the personal data that Signa captured during verification. Each method needs
+the `compliance-kyc:pii:read` scope. See [OAuth scopes](#oauth-scopes).
+
+**Warning:** Each response carries personal data. The API sends `Cache-Control: no-store`. Do
+not log the response body. Do not cache the response body.
+
+Each method returns HTTP 409 until the session reaches a verdict: `APPROVED` or `REJECTED`.
+
+### `getSessionApplicantData(String sessionId)`
+
+`GET /api/external/compliance/kyc/sessions/{id}/applicant-data`
+
+Returns the applicant data that Signa captured: name, date of birth, nationality, address, and
+the presented identity document.
+
+```java
+BlaaizResponse applicant = blaaiz.signa().getSessionApplicantData("session-id");
+```
+
+Response data:
+
+```
+{ session_id, first_name, middle_name, last_name, date_of_birth, country, nationality,
+  address: { line, city, state, postal_code },
+  document: { type, number, issuing_country, issue_date, expiry_date } | null,
+  extracted_at }
+```
+
+Every field except `session_id` and `extracted_at` can be `null`. The `document.number` field is
+`null` when the live provider read failed. The whole `data` value is `null` when the session has
+a verdict but Signa did not capture applicant data.
+
+### `listSessionDocuments(String sessionId)`
+
+`GET /api/external/compliance/kyc/sessions/{id}/documents`
+
+Lists the documents that Signa captured for the session.
+
+```java
+BlaaizResponse documents = blaaiz.signa().listSessionDocuments("session-id");
+```
+
+Response data is an array. Each entry has this shape:
+
+```
+{ id, kind, document_type, document_side, content_type, available, unavailable_reason }
+```
+
+- `kind` is one of `DOCUMENT`, `SELFIE`, `PROOF_OF_ADDRESS`, `LIVENESS_REFERENCE`, or `OTHER`.
+- `document_side` is `FRONT_SIDE`, `BACK_SIDE`, or `null`.
+- `unavailable_reason` is `NOT_RETAINED`, `RETRIEVAL_FAILED`, or `null`.
+
+### `getSessionDocument(String sessionId, String documentId)`
+
+`GET /api/external/compliance/kyc/sessions/{id}/documents/{documentId}`
+
+Returns a download link for one document. The link expires after 15 minutes. The response never
+contains the document bytes.
+
+Anyone who has the download link can download the document until the link expires. Do not log
+the link. Do not send it to a client that you do not control.
+
+```java
+BlaaizResponse download = blaaiz.signa().getSessionDocument("session-id", "document-id");
+```
+
+Response data: `{ url, content_type, expires_at }`.
+
+The API returns HTTP 410 when Signa no longer retains the document. This method is rate limited
+to 30 requests per minute and 600 requests per hour, per business. The API returns HTTP 429 above
+these limits.
+
 ## Errors
 
 The SDK throws `IllegalArgumentException` for every field listed as required above, before it
 sends the request. Every method that takes a `sessionId` throws `IllegalArgumentException` with
-the message `Session ID is required` when `sessionId` is `null` or empty.
+the message `Session ID is required` when `sessionId` is `null` or empty. `getSessionDocument`
+also throws `IllegalArgumentException` with the message `Document ID is required` when
+`documentId` is `null` or empty.
 
 The API returns HTTP 422 for a validation failure it detects, and HTTP 404 for an unknown
-session. Both surface as `BlaaizException`.
+session. Both surface as `BlaaizException`. The [Read captured data](#read-captured-data) methods
+can also return HTTP 403, 409, 410, or 429; see that section for the meaning of each one.
 
 ## OAuth scopes
 
-Signa needs three scopes: `compliance-kyc:read`, `compliance-kyc:create`, and
-`compliance-kyc:cancel`. `BlaaizClient.allScopes()` includes them by default. A business without
-Signa access can still request a token: the API drops the scopes it does not hold and keeps the
-rest.
+Signa needs four scopes: `compliance-kyc:read`, `compliance-kyc:create`, `compliance-kyc:cancel`,
+and `compliance-kyc:pii:read`. `BlaaizClient.allScopes()` includes all four by default.
+
+Blaaiz grants `compliance-kyc:pii:read` to a credential only on request. The API drops a
+requested scope that the credential does not hold, so a token request still succeeds without it.
+A business without this grant gets a token that lacks `compliance-kyc:pii:read`, and the methods
+in [Read captured data](#read-captured-data) then return HTTP 403. Only OAuth tokens are
+scope-checked.
