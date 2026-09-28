@@ -11,13 +11,18 @@ Get the service with `blaaiz.webhooks()`.
 ```java
 BlaaizResponse webhook = blaaiz.webhooks().register(Map.of(
         "collection_url", "https://your-domain.com/webhooks/collection",
-        "payout_url", "https://your-domain.com/webhooks/payout"));
+        "payout_url", "https://your-domain.com/webhooks/payout",
+        "kyc_url", "https://your-domain.com/webhooks/kyc"));
 ```
 
 Required:
 
 - `collection_url`
 - `payout_url`
+
+Optional:
+
+- `kyc_url` — the callback URL for Signa KYC/KYB session events
 
 ### `get()`
 
@@ -38,6 +43,10 @@ BlaaizResponse updated = blaaiz.webhooks().update("webhook-id", Map.of(
         "collection_url", "https://your-domain.com/webhooks/v2/collection",
         "payout_url", "https://your-domain.com/webhooks/v2/payout"));
 ```
+
+`kyc_url` is optional. If you do not send `kyc_url`, the API keeps the current value. To remove
+the value, send `kyc_url` as `null`. Use a `HashMap` for this, because `Map.of` does not accept a
+`null` value.
 
 ### `replay(Map<String, Object> replayData)`
 
@@ -126,6 +135,13 @@ The returned map holds the payload, plus two keys that the method adds:
 `constructEvent` throws `BlaaizException` with the message `Invalid webhook signature` when the
 signature does not match. It throws `BlaaizException` with the message
 `Invalid webhook payload: unable to parse JSON` when the body is not a JSON object.
+
+### Verify Signa webhooks
+
+A Signa callback, sent to `kyc_url`, uses the same `X-Blaaiz-Signature` and `X-Blaaiz-Timestamp`
+headers and the same HMAC-SHA256 scheme as a collection or payout webhook. Use
+`verifySignature` or `constructEvent` for a Signa callback the same way you use them for the
+other webhook types.
 
 ## Handler examples
 

@@ -63,7 +63,7 @@ Blaaiz blaaiz = new Blaaiz(new BlaaizClientOptions()
 );
 ```
 
-When you do not set `oauthScope`, the SDK requests all 21 supported scopes. To see the list,
+When you do not set `oauthScope`, the SDK requests all 24 supported scopes. To see the list,
 call `BlaaizClient.allScopes()`.
 
 Token refresh is thread-safe. Concurrent requests share one cached token.
@@ -94,6 +94,7 @@ When you configure both OAuth credentials and an API key, the SDK uses OAuth.
 - **Rates**: FX rate lookups
 - **Swaps**: Currency swaps between business wallets
 - **Refunds**: Refund creation and lookup
+- **Signa**: Merchant KYC/KYB verification sessions and document collection
 - **Merchant reference**: An optional `merchant_reference` on a payout or a collection. See [Merchant reference](#merchant-reference).
 
 ## Supported Currencies and Methods
@@ -157,6 +158,7 @@ The sections below show the most common calls. For the full reference, read the 
 - [Fees and files](docs/fees-files.md)
 - [Swaps](docs/swaps.md)
 - [Refunds](docs/refunds.md)
+- [Signa](docs/signa.md)
 - [Webhooks](docs/webhooks.md)
 
 ### Services
@@ -179,6 +181,7 @@ Get each service from the `Blaaiz` facade:
 | `rates()`                  | `RateService`                |
 | `swaps()`                  | `SwapService`                |
 | `refunds()`                | `RefundService`              |
+| `signa()`                  | `SignaService`               |
 
 ### Customer Management
 
@@ -723,6 +726,84 @@ BlaaizResponse refund = blaaiz.refunds().initiate(Map.of(
 BlaaizResponse status = blaaiz.refunds().get("refund-id");
 ```
 
+### Signa Merchant KYC/KYB Sessions
+
+Signa lets a business create and manage verification sessions for its own customers. A session's
+`requirements` can include `DOCUMENTS`, `SELFIE`, `FACE_MATCH`, and `PROOF_OF_ADDRESS`.
+
+A session has one of two fulfilment modes:
+
+- `HEADLESS`: your server uploads the documents and submits the session. Document uploads and
+  `submitSession` work only in this mode.
+- `HOSTED`: the customer opens a Blaaiz verification link. `issueVerificationLink` works only in
+  this mode.
+
+The API accepts only some combinations of `requirements` and `fulfilment_mode`. For the list,
+see [Supported requirement sets](docs/signa.md#supported-requirement-sets).
+
+```java
+BlaaizResponse session = blaaiz.signa().createSession(Map.of(
+        "customer_reference", "customer-123",
+        "idempotency_key", "signa-request-123",
+        "requirements", List.of("DOCUMENTS"),
+        "fulfilment_mode", "HEADLESS",
+        "applicant", Map.of(
+                "first_name", "Ada",
+                "last_name", "Lovelace",
+                "country", "GBR")));
+
+BlaaizResponse sessions = blaaiz.signa().listSessions(Map.of("limit", 20, "offset", 0));
+BlaaizResponse current = blaaiz.signa().getSession("session-id");
+```
+
+For a very small document, send the content inline as base64. The API can reject a request body
+that is larger than approximately 8 KB. Each request must use one transport: `content_base64` or
+a staged `file_name`.
+
+```java
+blaaiz.signa().uploadSessionDocument("session-id", Map.of(
+        "filename", "passport.jpg",
+        "content_type", "image/jpeg",
+        "id_doc_type", "PASSPORT",
+        "country", "GBR",
+        "content_base64", "...base64 document bytes..."));
+```
+
+For all other documents, use the staged upload flow. Send the exact `headers` from the upload URL
+response with the direct `PUT`. Then register the returned `file_name` with Signa.
+
+```java
+BlaaizResponse upload = blaaiz.signa().createDocumentUploadUrl("session-id", Map.of(
+        "file_name", "passport.jpg",
+        "id_doc_type", "PASSPORT"));
+
+// PUT the document bytes to the url in upload's response, with the given headers.
+// The URL is short-lived and its headers are part of its signature.
+
+blaaiz.signa().uploadSessionDocument("session-id", Map.of(
+        "filename", "passport.jpg",
+        "content_type", "image/jpeg",
+        "id_doc_type", "PASSPORT",
+        "country", "GBR",
+        "file_name", "staged-file-name-from-upload"));
+```
+
+After you upload the documents, submit the session. To stop a session, cancel it.
+
+```java
+blaaiz.signa().submitSession("session-id");
+blaaiz.signa().cancelSession("other-session-id");
+```
+
+For a `HOSTED` session, issue or rotate the customer's verification link:
+
+```java
+BlaaizResponse link = blaaiz.signa().issueVerificationLink("hosted-session-id");
+```
+
+The `docs/signa.md` page has the full method reference, including the validation rules and the
+HOSTED/HEADLESS restrictions.
+
 ### Fees
 
 ```java
@@ -747,7 +828,8 @@ BlaaizResponse reverse = blaaiz.fees().getBreakdown(Map.of(
 // Register
 BlaaizResponse webhook = blaaiz.webhooks().register(Map.of(
         "collection_url", "https://your-domain.com/webhooks/collection",
-        "payout_url", "https://your-domain.com/webhooks/payout"
+        "payout_url", "https://your-domain.com/webhooks/payout",
+        "kyc_url", "https://your-domain.com/webhooks/kyc" // Optional Signa callback
 ));
 
 // Read the current configuration
@@ -980,6 +1062,13 @@ try {
 `verifySignature` compares the digests with `MessageDigest.isEqual`, which takes constant time.
 This prevents a timing attack.
 
+### Verify Signa webhooks
+
+Signa callbacks use the same `X-Blaaiz-Signature` and `X-Blaaiz-Timestamp` headers and
+HMAC-SHA256 scheme as collection and payout webhooks. Keep the request body raw. Then reuse
+`verifySignature` or `constructEvent` from `WebhookService`, the same way you do for the other
+webhook types.
+
 ### Spring Boot webhook handler
 
 Take the body as a `String`, not as a parsed object. This keeps the bytes unchanged.
@@ -1041,7 +1130,7 @@ Blaaiz prod = new Blaaiz(new BlaaizClientOptions()
 | ----------------------- | ------------------------------------------------------ |
 | `BLAAIZ_CLIENT_ID`      | The OAuth client ID                                     |
 | `BLAAIZ_CLIENT_SECRET`  | The OAuth client secret                                 |
-| `BLAAIZ_OAUTH_SCOPE`    | The OAuth scopes; defaults to all 21 scopes             |
+| `BLAAIZ_OAUTH_SCOPE`    | The OAuth scopes; defaults to all 24 scopes             |
 | `BLAAIZ_API_KEY`        | The legacy API key                                      |
 | `BLAAIZ_API_URL`        | The base URL; defaults to the dev environment           |
 | `BLAAIZ_WEBHOOK_SECRET` | The secret for webhook signature verification           |

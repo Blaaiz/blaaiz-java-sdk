@@ -35,7 +35,7 @@ OkHttp connection pool is shared by all requests.
 | `apiKey(String)`                  | none                          | The legacy API key                   |
 | `clientId(String)`                | none                          | The OAuth client ID                  |
 | `clientSecret(String)`            | none                          | The OAuth client secret              |
-| `oauthScope(String)`              | all 21 scopes                 | Space-separated OAuth scopes         |
+| `oauthScope(String)`              | all 24 scopes                 | Space-separated OAuth scopes         |
 | `baseUrl(String)`                 | `https://api-dev.blaaiz.com`  | The API base URL                     |
 | `timeoutSeconds(int)`             | `30`                          | Connect, read, and write timeout     |
 
@@ -63,6 +63,7 @@ SDKs.
 | `rates()`                  | `RateService`                |
 | `swaps()`                  | `SwapService`                |
 | `refunds()`                | `RefundService`              |
+| `signa()`                  | `SignaService`               |
 
 ## `testConnection()`
 
