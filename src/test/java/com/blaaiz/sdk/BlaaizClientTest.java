@@ -91,14 +91,14 @@ class BlaaizClientTest {
 
     @Test
     void allScopesReturnsCanonicalScopesInOrder() {
-        // Source SDKs (Node.js/Python/Laravel) all define 21 scopes here, despite the task
-        // brief's "20 canonical scopes" phrasing -- the literal list it enumerates has 21
-        // entries, matching every SDK's actual ALL_SCOPES array. Preserved as-is for parity.
+        // Must stay identical to ALL_SCOPES in the Node.js, Python, and Laravel SDKs.
         List<String> scopes = BlaaizClient.allScopes();
-        assertEquals(21, scopes.size());
+        assertEquals(24, scopes.size());
         assertEquals("wallet:read", scopes.get(0));
-        assertEquals("rates:read", scopes.get(scopes.size() - 1));
+        assertEquals("compliance-kyc:cancel", scopes.get(scopes.size() - 1));
         assertTrue(scopes.contains("swap:create"));
+        assertTrue(scopes.containsAll(
+                List.of("compliance-kyc:read", "compliance-kyc:create", "compliance-kyc:cancel")));
     }
 
     // ---- makeRequest happy path ----
