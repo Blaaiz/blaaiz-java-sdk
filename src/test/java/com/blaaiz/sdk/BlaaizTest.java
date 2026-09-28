@@ -86,6 +86,7 @@ class BlaaizTest {
         assertNotNull(blaaiz.rates());
         assertNotNull(blaaiz.swaps());
         assertNotNull(blaaiz.refunds());
+        assertNotNull(blaaiz.signa());
     }
 
     @Test

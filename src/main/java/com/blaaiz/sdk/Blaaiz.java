@@ -30,6 +30,7 @@ public class Blaaiz {
     private final RateService rates;
     private final SwapService swaps;
     private final RefundService refunds;
+    private final SignaService signa;
 
     public Blaaiz(BlaaizClientOptions options) {
         this(options, null);
@@ -53,6 +54,7 @@ public class Blaaiz {
         this.rates = new RateService(client);
         this.swaps = new SwapService(client);
         this.refunds = new RefundService(client);
+        this.signa = new SignaService(client);
     }
 
     public CustomerService customers() {
@@ -112,6 +114,11 @@ public class Blaaiz {
     /** Refund creation and lookup. */
     public RefundService refunds() {
         return refunds;
+    }
+
+    /** Signa merchant KYC/KYB verification sessions. */
+    public SignaService signa() {
+        return signa;
     }
 
     /** {@code true} if {@link CurrencyService#list()} succeeds; swallows any exception, never throws. */

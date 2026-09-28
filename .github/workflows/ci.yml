@@ -132,6 +132,25 @@ jobs:
         env:
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
 
+  release-please:
+    runs-on: ubuntu-22.04
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+      pull-requests: write
+    concurrency:
+      group: release-please
+      cancel-in-progress: false
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - uses: googleapis/release-please-action@v5
+        id: release
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
   publish-dry-run:
     runs-on: ubuntu-22.04
     needs: [ test, build, examples ]
@@ -157,11 +176,25 @@ jobs:
   # and a skipped dependency would skip this job too.
   publish:
     runs-on: ubuntu-22.04
-    needs: [ test, build, examples ]
-    if: github.event_name == 'release' && github.event.action == 'published'
+    needs: [ test, build, examples, release-please ]
+    # A release that release-please creates with GITHUB_TOKEN does not start a
+    # new workflow run, so publish runs in this run when release_created is true.
+    # !cancelled() keeps it alive on a manual release event, where release-please
+    # is skipped and would otherwise skip this job.
+    if: >-
+      !cancelled()
+      && needs.test.result == 'success'
+      && needs.build.result == 'success'
+      && needs.examples.result == 'success'
+      && (needs.release-please.outputs.release_created == 'true'
+          || (github.event_name == 'release' && github.event.action == 'published'))
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The tagged commit, not the pushed one: a later push's run can create
+          # the release for an earlier merge.
+          ref: ${{ needs.release-please.outputs.tag_name || github.ref }}
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4

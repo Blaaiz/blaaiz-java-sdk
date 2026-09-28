@@ -91,14 +91,14 @@ class BlaaizClientTest {
 
     @Test
     void allScopesReturnsCanonicalScopesInOrder() {
-        // Source SDKs (Node.js/Python/Laravel) all define 21 scopes here, despite the task
-        // brief's "20 canonical scopes" phrasing -- the literal list it enumerates has 21
-        // entries, matching every SDK's actual ALL_SCOPES array. Preserved as-is for parity.
+        // Must stay identical to ALL_SCOPES in the Node.js, Python, and Laravel SDKs.
         List<String> scopes = BlaaizClient.allScopes();
-        assertEquals(21, scopes.size());
+        assertEquals(25, scopes.size());
         assertEquals("wallet:read", scopes.get(0));
-        assertEquals("rates:read", scopes.get(scopes.size() - 1));
+        assertEquals("compliance-kyc:pii:read", scopes.get(scopes.size() - 1));
         assertTrue(scopes.contains("swap:create"));
+        assertEquals(List.of("compliance-kyc:read", "compliance-kyc:create", "compliance-kyc:cancel",
+                "compliance-kyc:pii:read"), scopes.subList(21, 25));
     }
 
     // ---- makeRequest happy path ----
@@ -133,7 +133,7 @@ class BlaaizClientTest {
         Request sent = requestCaptor.getValue();
         assertEquals("test-key", sent.header("x-blaaiz-api-key"));
         assertEquals("application/json", sent.header("Accept"));
-        assertEquals("Blaaiz-Java-SDK/1.4.0", sent.header("User-Agent"));
+        assertEquals("Blaaiz-Java-SDK/1.4.0", sent.header("User-Agent")); // x-release-please-version
         assertNull(sent.header("Authorization"));
     }
 
@@ -471,7 +471,7 @@ class BlaaizClientTest {
         client.downloadFile("https://example.com/file");
 
         Request sent = requestCaptor.getValue();
-        assertEquals("Blaaiz-Java-SDK/1.4.0", sent.header("User-Agent"));
+        assertEquals("Blaaiz-Java-SDK/1.4.0", sent.header("User-Agent")); // x-release-please-version
         assertNull(sent.header("x-blaaiz-api-key"));
         assertNull(sent.header("Authorization"));
         assertNull(sent.header("Accept"));

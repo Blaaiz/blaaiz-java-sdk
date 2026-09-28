@@ -37,14 +37,15 @@ import java.util.regex.Pattern;
  */
 public class BlaaizClient {
 
-    private static final String USER_AGENT = "Blaaiz-Java-SDK/1.4.0";
+    private static final String USER_AGENT = "Blaaiz-Java-SDK/1.4.0"; // x-release-please-version
 
     private static final List<String> ALL_SCOPES = Collections.unmodifiableList(List.of(
             "wallet:read", "currency:read", "bank:read", "customer:read", "customer:write",
             "beneficiary:read", "virtual-account:read", "virtual-account:create", "virtual-account:close",
             "collection:create", "collection:crypto:create", "collection:interac:accept",
             "payout:create", "swap:create", "transaction:read", "fees:read", "file:upload",
-            "webhook:read", "webhook:write", "webhook:replay", "rates:read"
+            "webhook:read", "webhook:write", "webhook:replay", "rates:read",
+            "compliance-kyc:read", "compliance-kyc:create", "compliance-kyc:cancel", "compliance-kyc:pii:read"
     ));
 
     private static final Map<String, String> MIME_TO_EXTENSION;
@@ -125,7 +126,7 @@ public class BlaaizClient {
                 .build();
     }
 
-    /** The 21 canonical OAuth scopes, in fixed order. */
+    /** The 25 canonical OAuth scopes, in fixed order. */
     public static List<String> allScopes() {
         return ALL_SCOPES;
     }
