@@ -13,7 +13,7 @@
 
   <groupId>com.blaaiz</groupId>
   <artifactId>blaaiz-java-sdk-examples</artifactId>
-  <version>1.5.0</version>
+  <version>1.6.0</version>
   <packaging>jar</packaging>
 
   <name>Blaaiz Java SDK Examples</name>
@@ -31,7 +31,7 @@
     <dependency>
       <groupId>com.blaaiz</groupId>
       <artifactId>blaaiz-java-sdk</artifactId>
-      <version>1.5.0</version> <!-- x-release-please-version -->
+      <version>1.6.0</version> <!-- x-release-please-version -->
     </dependency>
   </dependencies>
 

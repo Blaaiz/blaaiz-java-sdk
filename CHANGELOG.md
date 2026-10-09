@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.0](https://github.com/Blaaiz/blaaiz-java-sdk/compare/v1.5.0...v1.6.0) (2026-10-09)
+
+
+### Features
+
+* support mobile money payouts and list mobile money operators ([0952f21](https://github.com/Blaaiz/blaaiz-java-sdk/commit/0952f21d0af0cde2c8c19bebbeacaba6fdbb25a2))
+
 ## [1.5.0](https://github.com/Blaaiz/blaaiz-java-sdk/compare/v1.4.0...v1.5.0) (2026-09-28)
 
 
