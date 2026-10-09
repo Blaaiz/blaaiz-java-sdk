@@ -14,14 +14,14 @@ Requires JDK 11 or later.
 <dependency>
   <groupId>com.blaaiz</groupId>
   <artifactId>blaaiz-java-sdk</artifactId>
-  <version>1.6.0</version>
+  <version>1.6.1</version>
 </dependency>
 ```
 
 ### Gradle
 
 ```groovy
-implementation 'com.blaaiz:blaaiz-java-sdk:1.6.0'
+implementation 'com.blaaiz:blaaiz-java-sdk:1.6.1'
 ```
 <!-- x-release-please-end -->
 

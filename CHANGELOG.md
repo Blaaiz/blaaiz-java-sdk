@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.1](https://github.com/Blaaiz/blaaiz-java-sdk/compare/v1.6.0...v1.6.1) (2026-10-09)
+
+
+### Bug Fixes
+
+* **build:** pin Maven 3.9.16 so Maven Central accepts the release bundle ([041ad86](https://github.com/Blaaiz/blaaiz-java-sdk/commit/041ad8609ba1055cfbaa7e56e8c1eaaa48d5a3b9))
+
 ## [1.6.0](https://github.com/Blaaiz/blaaiz-java-sdk/compare/v1.5.0...v1.6.0) (2026-10-09)
 
 

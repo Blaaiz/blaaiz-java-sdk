@@ -37,7 +37,7 @@ import java.util.regex.Pattern;
  */
 public class BlaaizClient {
 
-    private static final String USER_AGENT = "Blaaiz-Java-SDK/1.6.0"; // x-release-please-version
+    private static final String USER_AGENT = "Blaaiz-Java-SDK/1.6.1"; // x-release-please-version
 
     private static final List<String> ALL_SCOPES = Collections.unmodifiableList(List.of(
             "wallet:read", "currency:read", "bank:read", "customer:read", "customer:write",
