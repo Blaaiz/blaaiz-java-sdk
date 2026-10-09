@@ -25,7 +25,7 @@ The Blaaiz SDKs for Java, Node.js, Laravel/PHP, and Python expose the same API s
 
 Give the tests you ran, and the steps to reproduce them.
 
-- [ ] `mvn test`
+- [ ] `./mvnw test`
 - [ ] New unit tests
 - [ ] Manual test against the API
 

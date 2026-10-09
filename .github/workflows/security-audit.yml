@@ -41,7 +41,7 @@ jobs:
       # Set the NVD_API_KEY repository secret to raise the NVD rate limit.
       - name: OWASP dependency check
         run: >
-          mvn -B org.owasp:dependency-check-maven:10.0.3:check
+          ./mvnw -B org.owasp:dependency-check-maven:10.0.3:check
           -DfailBuildOnCVSS=7
           -DassemblyAnalyzerEnabled=false
         env:
