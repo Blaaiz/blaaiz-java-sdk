@@ -23,6 +23,7 @@ public class Blaaiz {
     private final VirtualBankAccountService virtualBankAccounts;
     private final TransactionService transactions;
     private final BankService banks;
+    private final MomoOperatorService momoOperators;
     private final CurrencyService currencies;
     private final FeesService fees;
     private final FileService files;
@@ -47,6 +48,7 @@ public class Blaaiz {
         this.virtualBankAccounts = new VirtualBankAccountService(client);
         this.transactions = new TransactionService(client);
         this.banks = new BankService(client);
+        this.momoOperators = new MomoOperatorService(client);
         this.currencies = new CurrencyService(client);
         this.fees = new FeesService(client);
         this.files = new FileService(client);
@@ -83,6 +85,11 @@ public class Blaaiz {
 
     public BankService banks() {
         return banks;
+    }
+
+    /** Mobile money operator directory. */
+    public MomoOperatorService momoOperators() {
+        return momoOperators;
     }
 
     public CurrencyService currencies() {

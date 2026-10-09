@@ -331,16 +331,45 @@ class PayoutServiceTest {
         }
     }
 
+    // ---- mobile_money ----
+
+    private static Map<String, Object> mobileMoneyFields() {
+        Map<String, Object> data = baseFields();
+        data.put("to_currency_id", "KES");
+        data.put("method", "mobile_money");
+        data.put("phone_number", "+254700000000");
+        data.put("mobile_money_operator_id", "operator_1");
+        data.put("account_name", "Jane Doe");
+        return data;
+    }
+
+    @Test
+    void mobileMoneyRequiresPhoneNumberOperatorIdAndAccountName() {
+        stubOk();
+        Map<String, Object> data = mobileMoneyFields();
+
+        payouts.initiate(data);
+        verify(client).makeRequest("POST", "/api/external/payout", data, null);
+
+        for (String field : new String[] {"phone_number", "mobile_money_operator_id", "account_name"}) {
+            Map<String, Object> missing = new LinkedHashMap<>(data);
+            missing.remove(field);
+
+            IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> payouts.initiate(missing));
+            assertEquals(field + " is required", e.getMessage());
+        }
+    }
+
     // ---- unrecognized method ----
 
     @Test
     void unrecognizedMethodSkipsMethodConditionalValidation() {
-        // Only bank_transfer/interac/ach/wire/crypto have method-conditional extras; any other
-        // method value forwards through with just the base fields validated, matching the
-        // fall-through (no `else` branch) behavior in all three source SDKs.
+        // Only bank_transfer/interac/ach/wire/crypto/mobile_money have method-conditional extras;
+        // any other method value forwards through with just the base fields validated, matching
+        // the fall-through (no `else` branch) behavior in all three source SDKs.
         stubOk();
         Map<String, Object> data = baseFields();
-        data.put("method", "mobile_money");
+        data.put("method", "cash_pickup");
 
         payouts.initiate(data);
 

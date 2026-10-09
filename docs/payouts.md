@@ -13,7 +13,7 @@ The SDK validates the payload before it sends the request. The required fields d
 
 - `wallet_id`
 - `customer_id`
-- `method` — `bank_transfer`, `interac`, `ach`, `wire`, or `crypto`
+- `method` — `bank_transfer`, `mobile_money`, `interac`, `ach`, `wire`, or `crypto`
 - `from_currency_id`
 - `to_currency_id`
 - `from_amount` or `to_amount` — give one of the two
@@ -92,6 +92,35 @@ BlaaizResponse eurPayout = blaaiz.payouts().initiate(Map.of(
         "bic_code", "COBADEFFXXX",
         "account_name", "John Doe"));
 ```
+
+## Mobile money (KES, UGX, TZS, XOF, GHS)
+
+`method` is `mobile_money`. Use it when the destination currency supports mobile money.
+Required: `phone_number` (international format, starts with `+`), `mobile_money_operator_id`,
+`account_name`
+
+```java
+BlaaizResponse momoPayout = blaaiz.payouts().initiate(Map.of(
+        "wallet_id", "wallet-id",
+        "customer_id", "customer-id",
+        "method", "mobile_money",
+        "from_amount", 100,
+        "from_currency_id", "USD",
+        "to_currency_id", "currency-id",
+        "phone_number", "+254700000000",
+        "mobile_money_operator_id", "operator-id",
+        "account_name", "Jane Doe"));
+```
+
+Get `mobile_money_operator_id` from `blaaiz.momoOperators().list()`. See
+[Mobile money operators](transactions-banks-currencies-rates.md#mobile-money-operators).
+
+Use the currency ID for `to_currency_id`. XOF exists for more than one country (Benin and Côte
+d'Ivoire). The API rejects the code `XOF` alone unless you also send `country_id` to pick the
+country.
+
+In the payout response and in webhooks, the recipient `account_number` is the phone number
+and `bank_name` is the operator name. In the payout response, `bank_code` is the operator code.
 
 ## Interac (CAD)
 
