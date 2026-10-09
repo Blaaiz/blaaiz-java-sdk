@@ -182,6 +182,31 @@ Required:
 
 The SDK throws `IllegalArgumentException` when `owners` is missing or empty.
 
+## `linkKycSession(String customerId, String signaSessionId)`
+
+`POST /api/external/customer/{customerId}/kyc-session`
+
+If the person already passed a Signa session of your business, link that session to an individual
+customer. The person does not send their documents again.
+
+```java
+BlaaizResponse result = blaaiz.customers().linkKycSession("customer-id", "signa-session-id");
+```
+
+The SDK sends `{ "signa_session_id": "..." }` as the body.
+
+The call needs the `customer:write` and `compliance-kyc:pii:read` scopes. The session must be
+`APPROVED`, include `DOCUMENTS`, and be approved in the last 365 days. The customer details must
+agree with the verified person. If a condition fails, the API returns HTTP 400, 409, or 422, and
+the message names the condition.
+
+On success, the customer becomes `VERIFIED` and a `customer.status_changed` webhook fires. Blaaiz
+then copies the verified name, date of birth, document details, and images to the customer.
+
+The SDK throws `IllegalArgumentException` with the message `Customer ID is required` when
+`customerId` is `null` or empty. It throws `IllegalArgumentException` with the message
+`signa_session_id is required` when `signaSessionId` is `null` or empty.
+
 ## `deleteOwner(String customerId, String ownerId)`
 
 `DELETE /api/external/customer/{customerId}/owner/{ownerId}`

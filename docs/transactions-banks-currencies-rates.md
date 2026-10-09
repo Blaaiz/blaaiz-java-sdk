@@ -44,6 +44,12 @@ resolves the value in that order.
 
 Throws `IllegalArgumentException` when `transactionId` is `null` or empty.
 
+For a collection, `source_information` carries the payer details. It has these keys:
+`account_name`, `account_number`, `bank_name`, `sort_code`, `bank_swift_code`, `description`, and
+`narration`. Each key is always present. A key is `null` when the collection method does not
+supply it. Only NGN collections set `narration`. For a payout or a swap, all of these keys are
+`null`.
+
 ## Banks
 
 Get the service with `blaaiz.banks()`.

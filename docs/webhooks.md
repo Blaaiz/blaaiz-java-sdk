@@ -138,6 +138,10 @@ signature does not match. It throws `BlaaizException` with the message
 
 ### Verify Signa webhooks
 
+Signa and Signa ID callbacks go to `kyc_url`. The events are `merchant.kyc.session.completed`,
+`merchant.kyc.session.expired`, and `signa_id.grant.revoked`. After `signa_id.grant.revoked`, the
+release methods return no data for `data.release_id`.
+
 A Signa callback, sent to `kyc_url`, uses the same `X-Blaaiz-Signature` and `X-Blaaiz-Timestamp`
 headers and the same HMAC-SHA256 scheme as a collection or payout webhook. Use
 `verifySignature` or `constructEvent` for a Signa callback the same way you use them for the
