@@ -89,6 +89,15 @@ class SignaIdServiceTest {
     }
 
     @Test
+    void getWalletStatusEncodesTheAddress() {
+        signaId.getWalletStatus("0xabc/def");
+        signaId.getWalletStatus("0xabc def");
+
+        verify(client).makeRequest("GET", "/api/v1/signa-id/public/wallets/0xabc%2Fdef/status", null, null);
+        verify(client).makeRequest("GET", "/api/v1/signa-id/public/wallets/0xabc%20def/status", null, null);
+    }
+
+    @Test
     void createReleaseRequestValidatesTheShapeWithoutAnHttpCall() {
         assertInvalid("Release request data is required", () -> signaId.createReleaseRequest(null));
 
