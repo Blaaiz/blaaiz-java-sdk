@@ -79,6 +79,7 @@ class BlaaizTest {
         assertNotNull(blaaiz.virtualBankAccounts());
         assertNotNull(blaaiz.transactions());
         assertNotNull(blaaiz.banks());
+        assertNotNull(blaaiz.momoOperators());
         assertNotNull(blaaiz.currencies());
         assertNotNull(blaaiz.fees());
         assertNotNull(blaaiz.files());

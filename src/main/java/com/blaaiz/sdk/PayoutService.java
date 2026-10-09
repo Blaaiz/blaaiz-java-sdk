@@ -18,9 +18,12 @@ public class PayoutService extends BaseService {
      *                   {@code email}/{@code interac_first_name}/{@code interac_last_name};
      *                   {@code ach}/{@code wire} need standard bank-account fields plus
      *                   {@code swift_code} for {@code wire}; {@code crypto} needs
-     *                   {@code wallet_address}/{@code wallet_token}/{@code wallet_network}. An
-     *                   optional {@code note} string is forwarded verbatim (populates the
-     *                   transaction description; defaults to the business name when omitted).
+     *                   {@code wallet_address}/{@code wallet_token}/{@code wallet_network};
+     *                   {@code mobile_money} needs {@code phone_number} (international format,
+     *                   leading {@code +}), {@code mobile_money_operator_id}, and
+     *                   {@code account_name}. An optional {@code note} string is forwarded
+     *                   verbatim (populates the transaction description; defaults to the
+     *                   business name when omitted).
      *                   Optional {@code merchant_reference} (max 255, unique per business) is
      *                   forwarded verbatim and echoed on the resulting transaction; a duplicate
      *                   value for the same business is rejected by the API with HTTP 422.
@@ -44,6 +47,8 @@ public class PayoutService extends BaseService {
             validateAchWireFields(payoutData, method);
         } else if ("crypto".equals(method)) {
             requireFields(payoutData, "wallet_address", "wallet_token", "wallet_network");
+        } else if ("mobile_money".equals(method)) {
+            requireFields(payoutData, "phone_number", "mobile_money_operator_id", "account_name");
         }
 
         return client.makeRequest("POST", "/api/external/payout", payoutData, null);

@@ -85,14 +85,14 @@ When you configure both OAuth credentials and an API key, the SDK uses OAuth.
 
 - **Customer management**: Create, update, and manage customers with KYC verification
 - **Collections**: Open Banking, Card, Crypto, Bank Transfer, and Interac
-- **Payouts**: Bank transfer, Interac, ACH, Wire, and Crypto across many currencies
+- **Payouts**: Bank transfer, Mobile Money, Interac, ACH, Wire, and Crypto across many currencies
 - **Virtual bank accounts**: Create and manage virtual accounts for NGN collections
 - **Wallets**: Multi-currency wallet management
 - **Transactions**: Transaction history and status
 - **Webhooks**: Webhook configuration and signature verification
 - **Files**: Document upload with pre-signed URLs
 - **Fees**: Fee calculations and breakdowns
-- **Banks and currencies**: The supported banks and currencies, payee and IBAN verification
+- **Banks and currencies**: The supported banks, mobile money operators, and currencies, payee and IBAN verification
 - **Rates**: FX rate lookups
 - **Swaps**: Currency swaps between business wallets
 - **Refunds**: Refund creation and lookup
@@ -111,6 +111,7 @@ When you configure both OAuth credentials and an API key, the SDK uses OAuth.
 ### Payouts
 
 - **Bank transfer**: NGN, GBP, EUR
+- **Mobile Money**: KES, UGX, TZS, XOF, GHS
 - **Interac**: CAD transactions
 - **ACH**: USD transactions
 - **Wire**: USD transactions
@@ -176,6 +177,7 @@ Get each service from the `Blaaiz` facade:
 | `virtualBankAccounts()`    | `VirtualBankAccountService`  |
 | `transactions()`           | `TransactionService`         |
 | `banks()`                  | `BankService`                |
+| `momoOperators()`          | `MomoOperatorService`        |
 | `currencies()`             | `CurrencyService`            |
 | `fees()`                   | `FeesService`                |
 | `files()`                  | `FileService`                |
@@ -511,6 +513,33 @@ BlaaizResponse eurPayout = blaaiz.payouts().initiate(Map.of(
 ));
 ```
 
+#### Mobile money payout (KES, UGX, TZS, XOF, GHS)
+
+Use `mobile_money` when the destination currency supports it. Get the `mobile_money_operator_id`
+from `momoOperators().list()`.
+
+```java
+BlaaizResponse momoPayout = blaaiz.payouts().initiate(Map.of(
+        "wallet_id", "wallet-id",
+        "customer_id", "customer-id",
+        "method", "mobile_money",
+        "from_amount", 100,
+        "from_currency_id", "USD",
+        "to_currency_id", "currency-id",          // The currency ID, not the code
+        "phone_number", "+254700000000",          // International format, starts with +
+        "mobile_money_operator_id", "operator-id", // Required
+        "account_name", "Jane Doe"                // Required
+));
+```
+
+Use the currency ID for `to_currency_id`. XOF exists for more than one country (Benin and Côte
+d'Ivoire), so the API rejects the code `XOF` alone unless you also send `country_id` to pick the
+country.
+
+In the payout response and in webhooks, the recipient shows the phone number in
+`account_number` and the operator name in `bank_name`. The payout response also shows
+the operator code in `bank_code`.
+
 #### Interac payout (CAD)
 
 ```java
@@ -692,8 +721,15 @@ BlaaizResponse iban = blaaiz.banks().verifyIban(Map.of(
         "iban", "DE89370400440532013000"
 ));
 
+// Mobile money operators: filter by the destination currency ID (preferred) or by country_id
+BlaaizResponse operators = blaaiz.momoOperators().list(Map.of("currency_id", "currency-id"));
+
 BlaaizResponse currencies = blaaiz.currencies().list();
 ```
+
+Each currency also includes `country_id` and a `country` object (`id`, `name`, `short_name`,
+`alt_short_name`). Use them to tell apart currencies that exist for more than one country, such
+as XOF.
 
 ### Rates
 

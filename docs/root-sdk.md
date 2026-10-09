@@ -56,6 +56,7 @@ SDKs.
 | `virtualBankAccounts()`    | `VirtualBankAccountService`  |
 | `transactions()`           | `TransactionService`         |
 | `banks()`                  | `BankService`                |
+| `momoOperators()`          | `MomoOperatorService`        |
 | `currencies()`             | `CurrencyService`            |
 | `fees()`                   | `FeesService`                |
 | `files()`                  | `FileService`                |

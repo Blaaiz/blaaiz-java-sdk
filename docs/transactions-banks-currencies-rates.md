@@ -115,6 +115,24 @@ Required:
 
 - `iban`
 
+## Mobile money operators
+
+Get the service with `blaaiz.momoOperators()`.
+
+### `list()`
+
+`GET /api/external/momo-operator`
+
+Returns the mobile money operators. Each operator has `id`, `name`, `code`, and `country_id`.
+Use the `id` as `mobile_money_operator_id` in a mobile money payout.
+
+```java
+BlaaizResponse operators = blaaiz.momoOperators().list();
+
+// Filter by the destination currency ID (preferred) or by country_id
+BlaaizResponse kesOperators = blaaiz.momoOperators().list(Map.of("currency_id", "currency-id"));
+```
+
 ## Currencies
 
 Get the service with `blaaiz.currencies()`.
@@ -124,7 +142,9 @@ Get the service with `blaaiz.currencies()`.
 `GET /api/external/currency`
 
 Returns the supported currencies with their identifiers. `Blaaiz.testConnection()` uses this
-call.
+call. Each currency also has `country_id` and a `country` object with `id`, `name`,
+`short_name`, and `alt_short_name`. Use them to tell apart currencies that exist for more than
+one country, such as `XOF`.
 
 ```java
 BlaaizResponse currencies = blaaiz.currencies().list();
