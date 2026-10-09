@@ -68,6 +68,9 @@ Blaaiz blaaiz = new Blaaiz(new BlaaizClientOptions()
 When you do not set `oauthScope`, the SDK requests all 25 supported scopes. To see the list,
 call `BlaaizClient.allScopes()`.
 
+The default set does not include `signa-id:release`. To call the `blaaiz.signaId()` release
+methods, set `oauthScope` to that scope. See [Signa ID release](#signa-id-release).
+
 Token refresh is thread-safe. Concurrent requests share one cached token.
 
 ### API key (legacy)
@@ -97,6 +100,7 @@ When you configure both OAuth credentials and an API key, the SDK uses OAuth.
 - **Swaps**: Currency swaps between business wallets
 - **Refunds**: Refund creation and lookup
 - **Signa**: Merchant KYC/KYB verification sessions and document collection
+- **Signa ID**: Release of the data of a verified person to your business
 - **Merchant reference**: An optional `merchant_reference` on a payout or a collection. See [Merchant reference](#merchant-reference).
 
 ## Supported Currencies and Methods
@@ -186,6 +190,7 @@ Get each service from the `Blaaiz` facade:
 | `swaps()`                  | `SwapService`                |
 | `refunds()`                | `RefundService`              |
 | `signa()`                  | `SignaService`               |
+| `signaId()`                | `SignaIdService`             |
 
 ### Customer Management
 
@@ -245,6 +250,23 @@ blaaiz.customers().upgradeKybScope("customer-id", Map.of(
 ```
 
 The `owners` list is required. The ownership percentages must sum to exactly 100.
+
+#### Verify a customer with a Signa session
+
+If the person already passed a Signa session of your business, link that session to an individual
+customer. The person does not send their documents again.
+
+```java
+BlaaizResponse result = blaaiz.customers().linkKycSession("customer-id", "signa-session-id");
+```
+
+The call needs the `customer:write` and `compliance-kyc:pii:read` scopes. The session must be
+`APPROVED`, include `DOCUMENTS`, and be approved in the last 365 days. The customer details must
+agree with the verified person. If a condition fails, the API returns HTTP 400, 409, or 422, and
+the message names the condition.
+
+On success, the customer becomes `VERIFIED` and a `customer.status_changed` webhook fires. Blaaiz
+then copies the verified name, date of birth, document details, and images to the customer.
 
 #### Manage business documents
 
@@ -794,6 +816,10 @@ BlaaizResponse sessions = blaaiz.signa().listSessions(Map.of("limit", 20, "offse
 BlaaizResponse current = blaaiz.signa().getSession("session-id");
 ```
 
+`createSession` also accepts an optional `redirect_url`, an https URL on your site. When the person
+finishes on a Blaaiz-hosted verification page, the page sends the person to this URL with
+`session_id` added. The URL never carries the result.
+
 For a very small document, send the content inline as base64. The API can reject a request body
 that is larger than approximately 8 KB. Each request must use one transport: `content_base64` or
 a staged `file_name`.
@@ -839,6 +865,20 @@ For a `HOSTED` session, issue or rotate the customer's verification link:
 BlaaizResponse link = blaaiz.signa().issueVerificationLink("hosted-session-id");
 ```
 
+To open a `HOSTED` session in a popup on your own page with the Signa web SDK, issue an access
+token from your server. Send `access_token` to your page and call
+`signa.startSession({ accessToken })` there.
+
+```java
+BlaaizResponse token = blaaiz.signa().issueAccessToken("hosted-session-id");
+// The response data holds access_token and expires_at.
+```
+
+The token is valid for 30 minutes. While more than 10 minutes remain, a new call returns the same
+token. With 10 minutes or less, the call returns a new token, and the previous token and
+verification link stop working. The token is a bearer credential: do not put it in a URL and do
+not log it.
+
 Once a session reaches a verdict, `getSessionApplicantData`, `listSessionDocuments`, and
 `getSessionDocument` read the personal data that Signa captured. These three methods need the
 `compliance-kyc:pii:read` scope, which Blaaiz grants to a credential only on request. See
@@ -847,6 +887,61 @@ personal-data warning.
 
 The `docs/signa.md` page has the full method reference, including the validation rules and the
 HOSTED/HEADLESS restrictions.
+
+### Signa ID release
+
+With Signa ID, a person who is already verified releases their data to your business in a popup.
+Your server creates a release request, your page opens the popup, and your server exchanges the
+code for the data.
+
+The release methods need an OAuth access token with the `signa-id:release` scope. API keys cannot
+call them. No scope bundle contains this scope, so select it by name when you create the
+credential. Signa ID release must also be enabled for your business.
+
+**Note:** The SDK does not request `signa-id:release` by default. Set `oauthScope` to that scope,
+preferably on a dedicated credential.
+
+```java
+Blaaiz signaIdClient = new Blaaiz(new BlaaizClientOptions()
+        .clientId(System.getenv("BLAAIZ_SIGNA_ID_CLIENT_ID"))
+        .clientSecret(System.getenv("BLAAIZ_SIGNA_ID_CLIENT_SECRET"))
+        .oauthScope("signa-id:release"));
+
+// 1. Create the request. Send request_token to your page.
+BlaaizResponse created = signaIdClient.signaId().createReleaseRequest(Map.of(
+        "idempotency_key", "release-user-10482",
+        "purpose", "Open your trading account",
+        "scopes", List.of("identity", "id_document", "document_images"), // also: "address"
+        "origin", "https://yourapp.com", // the exact window.location.origin of your page
+        "reference", "user_10482")); // optional
+
+// 2. In your page: const { code } = await signa.requestData({ requestToken })
+
+// 3. Exchange the code from your server. The code works one time, for 5 minutes.
+BlaaizResponse exchanged = signaIdClient.signaId().exchangeReleaseCode(code);
+
+// Read the release again during the 30-day access window
+BlaaizResponse current = signaIdClient.signaId().getRelease("release-id");
+
+// Download one document image. The URL expires in 15 minutes.
+BlaaizResponse image = signaIdClient.signaId().getReleaseDocument("release-id", "document-id");
+```
+
+The release request expires 30 minutes after the create. `getRelease` returns `data` as `null`
+before the exchange and when `release.access.status` is not `ACTIVE`. Each create and exchange
+endpoint allows 30 requests each minute for each business.
+
+**Warning:** The released data is personal data. Do not log it and do not cache it.
+
+To check if a wallet belongs to a verified Signa ID, call `getWalletStatus`. The endpoint needs no
+authentication and returns no personal data.
+
+```java
+BlaaizResponse status = blaaiz.signaId().getWalletStatus("0x1234...abcd", 8453);
+```
+
+The wallet status response is at the root of the body, with no `message` and no `data` wrapper.
+The `chainId` argument is optional.
 
 ### Fees
 
@@ -1107,6 +1202,10 @@ try {
 This prevents a timing attack.
 
 ### Verify Signa webhooks
+
+Signa and Signa ID callbacks go to your `kyc_url`. The events are `merchant.kyc.session.completed`,
+`merchant.kyc.session.expired`, and `signa_id.grant.revoked`. After `signa_id.grant.revoked`, the
+release methods return no data for `data.release_id`.
 
 Signa callbacks use the same `X-Blaaiz-Signature` and `X-Blaaiz-Timestamp` headers and
 HMAC-SHA256 scheme as collection and payout webhooks. Keep the request body raw. Then reuse

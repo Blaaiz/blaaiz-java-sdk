@@ -65,6 +65,7 @@ SDKs.
 | `swaps()`                  | `SwapService`                |
 | `refunds()`                | `RefundService`              |
 | `signa()`                  | `SignaService`               |
+| `signaId()`                | `SignaIdService`             |
 
 ## `testConnection()`
 

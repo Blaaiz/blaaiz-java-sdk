@@ -136,6 +136,20 @@ public class CustomerService extends BaseService {
                 "POST", "/api/external/customer/" + customerId + "/upgrade-kyb-scope", upgradeData, null);
     }
 
+    /**
+     * Links an approved Signa session of your business to an individual customer, so the person
+     * does not send their documents again. Needs the {@code customer:write} and
+     * {@code compliance-kyc:pii:read} scopes. On success the customer becomes {@code VERIFIED}.
+     */
+    public BlaaizResponse linkKycSession(String customerId, String signaSessionId) {
+        requireNonBlank(customerId, "Customer ID is required");
+        requireNonBlank(signaSessionId, "signa_session_id is required");
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("signa_session_id", signaSessionId);
+        return client.makeRequest(
+                "POST", "/api/external/customer/" + customerId + "/kyc-session", body, null);
+    }
+
     public BlaaizResponse deleteOwner(String customerId, String ownerId) {
         requireNonBlank(customerId, "Customer ID is required");
         requireNonBlank(ownerId, "Owner ID is required");

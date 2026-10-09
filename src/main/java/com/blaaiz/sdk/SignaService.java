@@ -38,6 +38,9 @@ public class SignaService extends BaseService {
      *                    {@code SELFIE}, {@code FACE_MATCH}, {@code PROOF_OF_ADDRESS}). Optional
      *                    {@code fulfilment_mode} ({@code HOSTED} or {@code HEADLESS}) and
      *                    {@code applicant} are forwarded verbatim for the API to validate.
+     *                    Optional {@code redirect_url} (an https URL on your site) is also forwarded
+     *                    as is. A Blaaiz-hosted verification page sends the person there with
+     *                    {@code session_id} added.
      */
     public BlaaizResponse createSession(Map<String, Object> sessionData) {
         validateSessionData(sessionData);
@@ -123,6 +126,20 @@ public class SignaService extends BaseService {
         requireNonBlank(sessionId, "Session ID is required");
         return client.makeRequest(
                 "POST", BASE_PATH + "/" + encodePathSegment(sessionId) + "/verification-link", null, null);
+    }
+
+    /**
+     * Issues a web SDK access token for a {@code HOSTED} session, so a page can start the session
+     * in a popup. The token is valid for 30 minutes. A new call returns the same token while more
+     * than 10 minutes remain. Otherwise it returns a new token, and the previous token and
+     * verification link stop working. Takes no body.
+     *
+     * <p><b>Warning:</b> the token is a bearer credential. Do not put it in a URL and do not log it.
+     */
+    public BlaaizResponse issueAccessToken(String sessionId) {
+        requireNonBlank(sessionId, "Session ID is required");
+        return client.makeRequest(
+                "POST", BASE_PATH + "/" + encodePathSegment(sessionId) + "/access-token", null, null);
     }
 
     /**
