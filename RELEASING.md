@@ -75,6 +75,19 @@ The `publish` job reads these repository secrets:
 | `GPG_PRIVATE_KEY`          | The GPG key that signs the release artifacts |
 | `MAVEN_GPG_PASSPHRASE`     | The passphrase for the GPG key              |
 
+## Maven version
+
+CI runs Maven through the Maven Wrapper (`./mvnw`). The wrapper pins Maven 3.9.16 in
+`.mvn/wrapper/maven-wrapper.properties`.
+
+**Caution:** Do not change the Maven version to 3.10 or higher. Maven 3.10.0 adds
+`maven-metadata-local.xml` and `_remote.repositories` files to the bundle. Maven Central then
+rejects the bundle with "Bundle has content that does NOT have a .pom file". Release 1.6.0 failed
+on Maven Central for this reason.
+
+The `publish-dry-run` job builds the bundle on each pull request to `main`. If the bundle has a file
+that is not an SDK artifact, the job fails.
+
 ## If a job fails after the merge
 
 release-please can create the tag and the GitHub Release in the same workflow run in which a test

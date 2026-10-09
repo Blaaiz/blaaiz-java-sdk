@@ -1235,9 +1235,9 @@ The [`examples/`](examples/) directory holds runnable classes for the common wor
 ## Development
 
 ```bash
-mvn test          # Run the 251 unit tests
-mvn package       # Build the jar
-mvn javadoc:javadoc  # Generate the Javadoc
+./mvnw test          # Run the 251 unit tests
+./mvnw package       # Build the jar
+./mvnw javadoc:javadoc  # Generate the Javadoc
 ```
 
 Read [.github/CONTRIBUTING.md](.github/CONTRIBUTING.md) before you open a pull request.

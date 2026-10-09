@@ -7,7 +7,7 @@ guidelines for work on the project.
 
 1. Fork the repository.
 2. Clone your fork: `git clone https://github.com/your-username/blaaiz-java-sdk.git`
-3. Make sure you have JDK 11 or later and Maven 3.8 or later.
+3. Make sure you have JDK 11 or later. Use the Maven Wrapper (`./mvnw`). It downloads the Maven version that CI uses.
 4. Create a branch: `git checkout -b feature/your-feature-name`
 
 ## Development Workflow
@@ -16,35 +16,35 @@ guidelines for work on the project.
 
 ```bash
 # All tests
-mvn test
+./mvnw test
 
 # One test class
-mvn test -Dtest=CustomerServiceTest
+./mvnw test -Dtest=CustomerServiceTest
 
 # One test method
-mvn test -Dtest=CustomerServiceTest#createSendsCustomerPayload
+./mvnw test -Dtest=CustomerServiceTest#createSendsCustomerPayload
 
 # Tests with a coverage report (written to target/site/jacoco/index.html)
-mvn test
+./mvnw test
 ```
 
 ### Build
 
 ```bash
 # Compile and package the jar
-mvn package
+./mvnw package
 
 # Install into your local repository
-mvn install
+./mvnw install
 
 # Build the artifacts that Maven Central requires, without signing them
-mvn -Prelease -DskipTests -Dgpg.skip=true package
+./mvnw -Prelease -DskipTests -Dgpg.skip=true package
 ```
 
 ### Generate the Javadoc
 
 ```bash
-mvn javadoc:javadoc
+./mvnw javadoc:javadoc
 ```
 
 ## Code Style
@@ -81,7 +81,7 @@ a Javadoc comment. Do not make one SDK different on its own.
 
 ## Pull Request Process
 
-1. Make sure `mvn test` passes.
+1. Make sure `./mvnw test` passes.
 2. Update `README.md` and the pages in `docs/` if you added or changed a feature.
 3. Make sure the build gives no new warnings.
 4. Make sure all CI checks pass.
