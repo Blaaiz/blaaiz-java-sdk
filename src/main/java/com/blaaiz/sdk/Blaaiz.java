@@ -32,6 +32,7 @@ public class Blaaiz {
     private final SwapService swaps;
     private final RefundService refunds;
     private final SignaService signa;
+    private final SignaIdService signaId;
 
     public Blaaiz(BlaaizClientOptions options) {
         this(options, null);
@@ -57,6 +58,7 @@ public class Blaaiz {
         this.swaps = new SwapService(client);
         this.refunds = new RefundService(client);
         this.signa = new SignaService(client);
+        this.signaId = new SignaIdService(client);
     }
 
     public CustomerService customers() {
@@ -126,6 +128,14 @@ public class Blaaiz {
     /** Signa merchant KYC/KYB verification sessions. */
     public SignaService signa() {
         return signa;
+    }
+
+    /**
+     * Signa ID release. The release methods need the {@code signa-id:release} OAuth scope, which
+     * the default scope list does not include. See {@link SignaIdService}.
+     */
+    public SignaIdService signaId() {
+        return signaId;
     }
 
     /** {@code true} if {@link CurrencyService#list()} succeeds; swallows any exception, never throws. */

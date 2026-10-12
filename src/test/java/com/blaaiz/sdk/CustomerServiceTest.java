@@ -304,6 +304,29 @@ class CustomerServiceTest {
     }
 
     @Test
+    void linkKycSessionPostsTheSignaSessionId() {
+        when(client.makeRequest(eq("POST"), eq("/api/external/customer/cust_1/kyc-session"), anyMap(), isNull()))
+                .thenReturn(new BlaaizResponse(Map.of(), 200, null));
+
+        customers.linkKycSession("cust_1", "session-1");
+
+        verify(client).makeRequest(
+                "POST", "/api/external/customer/cust_1/kyc-session", Map.of("signa_session_id", "session-1"), null);
+    }
+
+    @Test
+    void linkKycSessionValidatesBothIdsWithoutAnHttpCall() {
+        IllegalArgumentException e1 = assertThrows(IllegalArgumentException.class,
+                () -> customers.linkKycSession(null, "session-1"));
+        assertEquals("Customer ID is required", e1.getMessage());
+
+        IllegalArgumentException e2 = assertThrows(IllegalArgumentException.class,
+                () -> customers.linkKycSession("cust_1", null));
+        assertEquals("signa_session_id is required", e2.getMessage());
+        verifyNoInteractions(client);
+    }
+
+    @Test
     void deleteOwnerRequiresBothIds() {
         assertThrows(IllegalArgumentException.class, () -> customers.deleteOwner(null, "own_1"));
         assertThrows(IllegalArgumentException.class, () -> customers.deleteOwner("cust_1", null));

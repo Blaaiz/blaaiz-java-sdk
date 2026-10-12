@@ -222,6 +222,30 @@ class SignaServiceTest {
         verify(client).makeRequest("GET", BASE_PATH + "/session%20123", null, null);
     }
 
+    // ---- issueAccessToken ----
+
+    @Test
+    void issueAccessTokenSendsPostWithNoBodyAndEncodesTheSessionId() {
+        BlaaizResponse response = new BlaaizResponse(Map.of("data", Map.of("access_token", "token")), 200, null);
+        when(client.makeRequest(eq("POST"), eq(BASE_PATH + "/session%2F123/access-token"), isNull(), isNull()))
+                .thenReturn(response);
+
+        BlaaizResponse result = signa.issueAccessToken("session/123");
+
+        assertEquals(response, result);
+        verify(client).makeRequest("POST", BASE_PATH + "/session%2F123/access-token", null, null);
+    }
+
+    @Test
+    void createSessionForwardsRedirectUrlUnchanged() {
+        Map<String, Object> data = validSessionData();
+        data.put("redirect_url", "https://shop.example/kyc/done");
+
+        signa.createSession(data);
+
+        verify(client).makeRequest("POST", BASE_PATH, data, null);
+    }
+
     // ---- session id validation ----
 
     @Test
@@ -233,6 +257,7 @@ class SignaServiceTest {
             assertSessionIdRequired(() -> signa.createDocumentUploadUrl(sessionId, validUploadUrlData()));
             assertSessionIdRequired(() -> signa.uploadSessionDocument(sessionId, validDocumentData("content_base64", "aGVsbG8=")));
             assertSessionIdRequired(() -> signa.issueVerificationLink(sessionId));
+            assertSessionIdRequired(() -> signa.issueAccessToken(sessionId));
             assertSessionIdRequired(() -> signa.getSessionApplicantData(sessionId));
             assertSessionIdRequired(() -> signa.listSessionDocuments(sessionId));
             assertSessionIdRequired(() -> signa.getSessionDocument(sessionId, "doc-1"));
