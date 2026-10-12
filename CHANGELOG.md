@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.0](https://github.com/Blaaiz/blaaiz-java-sdk/compare/v1.6.1...v1.7.0) (2026-10-12)
+
+
+### Features
+
+* **signa:** add Signa ID release, web SDK access tokens and customer linking ([1416b69](https://github.com/Blaaiz/blaaiz-java-sdk/commit/1416b691b52a85980c5e36a961fe24069e7f1931))
+
 ## [1.6.1](https://github.com/Blaaiz/blaaiz-java-sdk/compare/v1.6.0...v1.6.1) (2026-10-09)
 
 
